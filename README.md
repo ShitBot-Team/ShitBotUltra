@@ -19,7 +19,7 @@ ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重�
 | 组件 | 语言与形式 | 主要职责 |
 | --- | --- | --- |
 | Core | Go | 统一业务引擎、协议、数据库、管理 API、内置 WebUI 资源 |
-| CLI | Go 轻量启动器 | 参考 LuckyLillia.CLI 的使用形态，直接运行即可启动 Core、显示日志和本机 WebUI 地址 |
+| CLI | Go + 标准库 `flag` | 参考 LuckyLillia.CLI 的轻量入口，直接运行即可启动 Core、显示日志和本机 WebUI 地址 |
 | Desktop | C# + WinUI 3 + XAML | Windows 原生桌面界面，内置 CLI 宿主运行同一份 Core，可选开启 WebUI；Avalonia 为备选 |
 | Minecraft | Java + Maven 多模块 | 薄插件，适配 Bukkit/Paper/Folia、Velocity、BungeeCord、Nukkit-MOT |
 | WebUI | TypeScript + Vue 3 + Vite | 浏览器调试与管理页面，构建后随 Core 嵌入 CLI 产物 |
@@ -28,7 +28,7 @@ ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重�
 
 源码命名采用 `shitbotteam.ultra.<组件名>`：Minecraft 根包为 `shitbotteam.ultra.minecraft`，C# Desktop 根命名空间为 `shitbotteam.ultra.desktop`；Core、CLI、WebUI 对应 `core`、`cli`、`webui`。Go 的模块导入路径仍遵循 Go 规则，具体映射见[命名规范](docs/plan/02-仓库结构与开发规范.md#6-命名与中文信息)。
 
-Core 集中处理业务；CLI、桌面端、浏览器只是不同操作入口。CLI 采用 [LuckyLillia.CLI](https://github.com/LLOneBot/LuckyLillia.CLI) 这种“启动程序、看日志、用少量参数控制”的体验，日常管理主要使用内置 WebUI。Desktop 默认使用 C# + WinUI 3 原生界面，通过同一个 Core 管理配置，按需开启浏览器 WebUI。若以后需要跨平台或 WinUI 的部署条件不合适，再改用 C# + Avalonia；Avalonia 使用自绘控件，不称为 Windows 原生控件。具体取舍见[语言选型](docs/plan/01-总体规划.md#2-编程语言与技术选型)。
+Core 集中处理业务；CLI、桌面端、浏览器只是不同操作入口。CLI 采用 [LuckyLillia.CLI](https://github.com/LLOneBot/LuckyLillia.CLI) 这种“启动程序、看日志、用少量参数控制”的体验，使用 Go 标准库解析参数，日常管理主要使用内置 WebUI。Desktop 默认使用 C# + WinUI 3 原生界面，通过同一个 Core 管理配置，按需开启浏览器 WebUI。若以后需要跨平台或 WinUI 的部署条件不合适，再改用 C# + Avalonia；Avalonia 使用自绘控件，不称为 Windows 原生控件。具体取舍见[语言选型](docs/plan/01-总体规划.md#2-编程语言与技术选型)。
 
 ## 机器人实现与支持边界
 
