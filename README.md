@@ -2,7 +2,7 @@
 
 ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重新规划的、可自部署的开源群服互通主程序：由独立 Core 处理机器人连接、业务规则、数据存储、图片渲染和管理功能，Minecraft JAR 负责游戏事件、数据采集及游戏侧动作执行。
 
-**当前阶段：架构规划。本文中的程序、命令、接口和其他仓库名称是拟定方案，尚未实现或创建。**
+**当前阶段：架构规划。四个仓库已建立，程序、命令与接口尚未实现。** 本仓库的 [plan.md](plan.md) 是公共计划入口。
 
 ## 规划文档
 
@@ -24,7 +24,7 @@ ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重�
 | Minecraft | Java + Maven 多模块 | 薄插件，适配 Bukkit/Paper/Folia、Velocity、BungeeCord、Nukkit-MOT |
 | WebUI | TypeScript + Vue 3 + Vite | 浏览器调试与管理页面，构建后随 Core 嵌入 CLI 产物 |
 
-推荐将本仓库 `ShitBot-Team/ShitBotUltra` 用作 **Core 仓库与项目入口**，另设 `ShitBotUltra-CLI`、`ShitBotUltra-Desktop`、`ShitBotUltra-Minecraft`。普通版继续留在个人仓库 `hutuyee/ShitBot`。
+本仓库 `ShitBot-Team/ShitBotUltra` 用作 **Core 仓库与项目入口**，组件分为 [ShitBotUltra-CLI](https://github.com/ShitBot-Team/ShitBotUltra-CLI)、[ShitBotUltra-Desktop](https://github.com/ShitBot-Team/ShitBotUltra-Desktop)、[ShitBotUltra-Minecraft](https://github.com/ShitBot-Team/ShitBotUltra-Minecraft)。公共文档集中在本仓库维护，各组件通过自己的 `plan.md` 和 `agent.md` 引用。普通版继续留在个人仓库 `hutuyee/ShitBot`。
 
 源码命名采用 `shitbotteam.ultra.<组件名>`：Minecraft 根包为 `shitbotteam.ultra.minecraft`，C# Desktop 根命名空间为 `shitbotteam.ultra.desktop`；Core、CLI、WebUI 对应 `core`、`cli`、`webui`。Go 的模块导入路径仍遵循 Go 规则，具体映射见[命名规范](docs/plan/02-仓库结构与开发规范.md#6-命名与中文信息)。
 
@@ -46,6 +46,6 @@ Core 集中处理业务；CLI、桌面端、浏览器只是不同操作入口。
 
 ## 开源与统计
 
-本仓库现有许可证为 [MIT](LICENSE)。计划公开 Core、CLI、Desktop、Minecraft 插件、WebUI、协议及构建说明；正常自部署不依赖项目方账号或付费授权服务。第三方机器人服务的条件由各自项目决定。
+Ultra 四个仓库采用 [AGPL-3.0-only](LICENSE)，历史许可与贡献范围见[许可证说明](docs/licensing.md)。计划公开 Core、CLI、Desktop、Minecraft 插件、WebUI、协议及构建说明；正常自部署不依赖项目方账号或付费授权服务。第三方机器人服务的条件由各自项目决定。
 
 bStats 计划接入受支持的 Minecraft 平台插件。Ultra 使用独立项目 ID，不沿用普通版统计 ID；ID 和后续接口由维护者提供。具体边界见[统计与外部接口](docs/plan/03-协议配置与迁移.md#6-bstats-与后续接口)。
