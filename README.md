@@ -26,6 +26,8 @@ ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重�
 
 推荐将本仓库 `ShitBot-Team/ShitBotUltra` 用作 **Core 仓库与项目入口**，另设 `ShitBotUltra-CLI`、`ShitBotUltra-Desktop`、`ShitBotUltra-Minecraft`。普通版继续留在个人仓库 `hutuyee/ShitBot`。
 
+源码命名采用 `shitbotteam.ultra.<组件名>`：Minecraft 根包为 `shitbotteam.ultra.minecraft`，C# Desktop 根命名空间为 `shitbotteam.ultra.desktop`；Core、CLI、WebUI 对应 `core`、`cli`、`webui`。Go 的模块导入路径仍遵循 Go 规则，具体映射见[命名规范](docs/plan/02-仓库结构与开发规范.md#6-命名与中文信息)。
+
 Core 集中处理业务；CLI、桌面端、浏览器只是不同操作入口。CLI 采用 [LuckyLillia.CLI](https://github.com/LLOneBot/LuckyLillia.CLI) 这种“启动程序、看日志、用少量参数控制”的体验，日常管理主要使用内置 WebUI。Desktop 默认使用 C# + WinUI 3 原生界面，通过同一个 Core 管理配置，按需开启浏览器 WebUI。若以后需要跨平台或 WinUI 的部署条件不合适，再改用 C# + Avalonia；Avalonia 使用自绘控件，不称为 Windows 原生控件。具体取舍见[语言选型](docs/plan/01-总体规划.md#2-编程语言与技术选型)。
 
 ## 机器人实现与支持边界
