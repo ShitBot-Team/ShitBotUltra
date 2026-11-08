@@ -38,6 +38,12 @@ Core 集中处理业务；CLI、桌面端、浏览器只是不同操作入口。
 
 > 请勿在 SnowLuma、LLBot 等第三方项目的社交群中讨论 ShitBot / ShitBotUltra 或寻求使用、排障支持，以免违反群规。请通过对应项目的 GitHub Issues 反馈：[ShitBot](https://github.com/hutuyee/ShitBot/issues)、[ShitBotUltra](https://github.com/ShitBot-Team/ShitBotUltra/issues)。
 
+## 参与贡献
+
+欢迎提交 PR，改进代码、修复问题或补充文档，也欢迎 AI 辅助编写的贡献。提交信息与 PR 标题使用 Conventional Commits，描述和正文可以写中文，例如 `fix(minecraft): 修复重复进服通知`、`docs: 补充部署说明`。
+
+一个 PR 聚焦一个明确目的，说明修改原因、影响及实际验证情况；未运行测试时如实注明。人工与 AI 辅助贡献遵守同样的规则，具体格式和简明 PR 约定见[贡献指南](CONTRIBUTING.md)。
+
 ## 开源与统计
 
 本仓库现有许可证为 [MIT](LICENSE)。计划公开 Core、CLI、Desktop、Minecraft 插件、WebUI、协议及构建说明；正常自部署不依赖项目方账号或付费授权服务。第三方机器人服务的条件由各自项目决定。
