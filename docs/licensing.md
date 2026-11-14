@@ -1,6 +1,6 @@
 # ShitBotUltra 许可证说明
 
-从本次许可证变更起，ShitBotUltra Core、CLI、Desktop 和 Minecraft 仓库的新版本采用 **GNU Affero General Public License version 3 only**，SPDX 标识为 **`AGPL-3.0-only`**。本次选择不包含“或任何更新版本”的自动授权。
+ShitBotUltra Core、CLI、Desktop、Minecraft 与独立 MC API 共五个仓库的新版本采用 **GNU Affero General Public License version 3 only**，SPDX 标识为 **`AGPL-3.0-only`**。本次选择不包含“或任何更新版本”的自动授权。已有四仓库保留现有完整正文，MC API 本次补上相同 LICENSE，不另选一套许可。
 
 各仓库根目录保留完整的 `LICENSE` 正文，便于独立获取和分发；本文件统一说明项目级许可约定。许可证正文以各仓库 [LICENSE](../LICENSE) 为准。
 
@@ -16,9 +16,19 @@
 
 ShitBotUltra 截至提交 `c2fcb15` 的既有历史版本使用 MIT。此次变更不撤销这些版本已经授予的 MIT 权利；原许可及版权声明保留于 [LICENSES/MIT-legacy.txt](../LICENSES/MIT-legacy.txt)。该文件是历史许可记录，不表示后续新代码同时提供 MIT 选项。
 
-普通版 [hutuyee/ShitBot](https://github.com/hutuyee/ShitBot) 保持自己的 MIT 许可。今后实际复用其代码时，保留对应原许可与版权声明，并记录来源；本次仅以普通版作为规划参考，没有把它的运行代码导入四个 Ultra 仓库。
+普通版 [hutuyee/ShitBot](https://github.com/hutuyee/ShitBot) 保持自己的 MIT 许可。今后实际复用其代码时，保留对应原许可与版权声明，并记录来源；本次仅以普通版作为规划参考，没有把它的运行代码导入 Ultra 仓库。
 
 新版本采用 AGPL 与历史授权并存的边界，参见 [GitHub 的许可证变更说明](https://opensource.guide/legal/#what-if-i-want-to-change-the-license-of-my-project)。
+
+## 第三方模板与浏览器资源
+
+计划适配并内置 [EasyBot Image Templates](https://github.com/BaizhouziYou/easybot-image-templates) 的服务器在线列表、玩家统计资料卡和服务器性能监控模板，作者署名为 **BaiZhouziYou**。当前只写计划，没有复制其模板、字体或媒体素材。
+
+上游自有源码标注 AGPL-3.0-only，并另提供 [NOTICE.md](https://github.com/BaizhouziYou/easybot-image-templates/blob/main/NOTICE.md)、[附加条款](https://github.com/BaizhouziYou/easybot-image-templates/blob/main/docs/ADDITIONAL_TERMS.md)及[第三方声明](https://github.com/BaizhouziYou/easybot-image-templates/blob/main/THIRD_PARTY_NOTICES.md)。实际引入时固定上游版本，保留这些文件及 LICENSE，记录适配内容和修改日期；在模板详情与关于 / 致谢页显示作者、项目名称和源码链接，不把衍生版本宣称成原作者运营或认可的项目。上游附加条款未要求每张输出图片添加水印。
+
+实际打包的库、字体和素材各自保留许可：上游列出的 liquidGL、html2canvas 为 MIT，Noto Sans SC 为 SIL OFL 1.1；封面与预览图片另按其[素材说明](https://github.com/BaizhouziYou/easybot-image-templates/blob/main/docs/ASSET-LICENSES.md)核对，不能仅凭仓库源码开放就视为全部获准再分发。随实际引入内容建立 THIRD_PARTY_NOTICES.md 和对应许可文件，不提前写成“已经内置”。
+
+Chromium / Chrome 二进制、浏览器随附组件及其他字体资源也按选定发行来源保留许可与声明，不能由 Ultra 的 LICENSE 替代。正式打包时登记版本、来源和声明文件；本阶段不下载或重新分发浏览器。
 
 ## 贡献
 
