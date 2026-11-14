@@ -55,4 +55,4 @@
 
 同级克隆可读取 `../ShitBotUltra/AGENTS.md`；没有 Core 克隆时读取 [GitHub 上的公共规范](https://github.com/ShitBot-Team/ShitBotUltra/blob/main/AGENTS.md)。只读本次需要的链接，不能把未读取的内容当作已加载规则。
 
-五个 Ultra 仓库各自提供完整的 **AGPL-3.0-only** `LICENSE`。第三方代码、模板、字体与素材保留原许可；普通版 MIT 和 Core 的历史 MIT 记录保持独立。具体边界见[许可说明](docs/licensing.md)。
+五个 Ultra 仓库各自提供完整的 **AGPL-3.0-only** `LICENSE`。第三方代码、模板、字体与素材保留原许可；普通版 ShitBot 的许可单独维护。具体边界见[许可说明](docs/licensing.md)。

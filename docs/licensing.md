@@ -12,13 +12,11 @@ ShitBotUltra Core、CLI、Desktop、Minecraft 与独立 MC API 共五个仓库�
 
 正文与适用解释可参阅 [GNU 官方 AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)和 [OSI 收录的许可正文](https://opensource.org/license/agpl-3.0)。
 
-## 历史 MIT 材料
+## 普通版与历史版本
 
-ShitBotUltra 截至提交 `c2fcb15` 的既有历史版本使用 MIT。此次变更不撤销这些版本已经授予的 MIT 权利；原许可及版权声明保留于 [LICENSES/MIT-legacy.txt](../LICENSES/MIT-legacy.txt)。该文件是历史许可记录，不表示后续新代码同时提供 MIT 选项。
+Ultra 当前版本以各仓库根目录的 AGPL-3.0-only `LICENSE` 为准。历史版本的许可信息可在对应 Git 提交中查看。
 
 普通版 [hutuyee/ShitBot](https://github.com/hutuyee/ShitBot) 保持自己的 MIT 许可。今后实际复用其代码时，保留对应原许可与版权声明，并记录来源；本次仅以普通版作为规划参考，没有把它的运行代码导入 Ultra 仓库。
-
-新版本采用 AGPL 与历史授权并存的边界，参见 [GitHub 的许可证变更说明](https://opensource.guide/legal/#what-if-i-want-to-change-the-license-of-my-project)。
 
 ## 第三方模板与浏览器资源
 
