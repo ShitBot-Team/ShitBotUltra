@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ShitBot-Team/ShitBotUltra/sdk/adapter"
@@ -144,6 +145,10 @@ func (c Config) Validate() error {
 	if err != nil || port == "" {
 		return errors.New("http.listen must be an IP address and port")
 	}
+	portNumber, err := strconv.Atoi(port)
+	if err != nil || portNumber < 0 || portNumber > 65535 {
+		return errors.New("http.listen port must be between 0 and 65535")
+	}
 	if net.ParseIP(host) == nil {
 		return errors.New("http.listen requires a literal IP address")
 	}
@@ -242,6 +247,8 @@ func (c Config) Validate() error {
 		}
 	}
 	routeIDs := map[string]bool{}
+	conversationNetworks := map[string]string{}
+	commandRoutes := map[string]bool{}
 	for _, r := range c.Routes {
 		if !localID.MatchString(r.ID) || routeIDs[r.ID] {
 			return errors.New("invalid or duplicate route ID")
@@ -272,6 +279,18 @@ func (c Config) Validate() error {
 				return errors.New("a route cannot span identity networks")
 			}
 			network = n.NetworkID
+		}
+		conversationKey := r.ConnectionID + "\x1f" + r.Conversation.Key()
+		if previous, exists := conversationNetworks[conversationKey]; exists && previous != network {
+			return errors.New("one bot conversation cannot map to multiple identity networks")
+		}
+		conversationNetworks[conversationKey] = network
+		if r.Commands && commandRoutes[conversationKey] {
+			return errors.New("one conversation must have a single command route")
+		}
+		commandRoutes[conversationKey] = commandRoutes[conversationKey] || r.Commands
+		if len(r.BotPrefix) > 256 || len(r.GamePrefix) > 256 {
+			return errors.New("route prefix is too long")
 		}
 	}
 	commandIDs := map[string]bool{}

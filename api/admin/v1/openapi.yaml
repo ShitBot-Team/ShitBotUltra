@@ -1,0 +1,471 @@
+openapi: 3.1.0
+info:
+  title: ShitBotUltra Core Management API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /status:
+    get:
+      operationId: getStatus
+      responses:
+        '200':
+          description: Core lifecycle and connection status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        default:
+          $ref: '#/components/responses/Error'
+  /connections:
+    get:
+      operationId: getConnections
+      responses:
+        '200':
+          $ref: '#/components/responses/Object'
+        default:
+          $ref: '#/components/responses/Error'
+  /events:
+    get:
+      operationId: streamEvents
+      parameters:
+        - in: header
+          name: Last-Event-ID
+          schema: { type: string, pattern: '^[0-9]+$' }
+      responses:
+        '200':
+          description: SSE with id, event and JSON data; reset means refresh current state. Slow consumers reconnect with Last-Event-ID. Use a streaming fetch with the Authorization header.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        default:
+          $ref: '#/components/responses/Error'
+  /config:
+    get:
+      operationId: getConfiguration
+      responses:
+        '200':
+          description: Configuration source containing secret references, not secret values
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      operationId: saveConfiguration
+      parameters:
+        - in: header
+          name: If-Match
+          required: true
+          schema: { type: string }
+      requestBody:
+        $ref: '#/components/requestBodies/Text'
+      responses:
+        '200':
+          description: Backed up and saved; running snapshot remains unchanged until restart
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [document, restart_required]
+                properties:
+                  document: { $ref: '#/components/schemas/Document' }
+                  restart_required: { const: true }
+        '428':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /config/validate:
+    post:
+      operationId: validateConfiguration
+      requestBody:
+        $ref: '#/components/requestBodies/Text'
+      responses:
+        '200':
+          $ref: '#/components/responses/Object'
+        default:
+          $ref: '#/components/responses/Error'
+  /secrets:
+    post:
+      operationId: createSecret
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$' }
+                value: { type: string, minLength: 32, maxLength: 4096 }
+      responses:
+        '201':
+          description: Created with exclusive access. Generated secret returned only here; never put it in a URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reference, value]
+                properties:
+                  reference: { type: string }
+                  value: { type: string }
+        default:
+          $ref: '#/components/responses/Error'
+  /bindings:
+    get:
+      operationId: listBindings
+      parameters:
+        - $ref: '#/components/parameters/Network'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Exact case-sensitive bindings, including ownerless whitelist entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Binding' }
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: addBinding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Binding' }
+      responses:
+        '201':
+          $ref: '#/components/responses/Object'
+        default:
+          $ref: '#/components/responses/Error'
+  /bindings/{network}/{name}:
+    parameters:
+      - in: path
+        name: network
+        required: true
+        schema: { type: string }
+      - in: path
+        name: name
+        required: true
+        schema: { type: string }
+    delete:
+      operationId: removeBinding
+      responses:
+        '200':
+          description: Binding removed. Configured kicks are attempted separately; unconfirmed kicks emit an SSE event.
+          content:
+            application/json:
+              schema: { type: object, properties: { removed: { const: true } } }
+        default:
+          $ref: '#/components/responses/Error'
+  /players:
+    get:
+      operationId: listPlayers
+      parameters:
+        - $ref: '#/components/parameters/Network'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - in: query
+          name: online
+          schema: { type: boolean }
+      responses:
+        '200':
+          $ref: '#/components/responses/Object'
+        default:
+          $ref: '#/components/responses/Error'
+  /inventory:
+    get:
+      operationId: getInventory
+      parameters:
+        - $ref: '#/components/parameters/Network'
+        - in: query
+          name: server_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: player_name
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          $ref: '#/components/responses/Object'
+        default:
+          $ref: '#/components/responses/Error'
+  /nodes/{id}/actions:
+    parameters:
+      - $ref: '#/components/parameters/ID'
+    post:
+      operationId: requestGameAction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [type, payload]
+              properties:
+                type:
+                  enum: [chat.send, player.kick, command.execute, inventory.read, tps.read, permission.check, placeholder.resolve]
+                payload: { type: object }
+      responses:
+        '200':
+          $ref: '#/components/responses/Object'
+        '504':
+          description: RESULT_UNKNOWN must not be automatically retried
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        default:
+          $ref: '#/components/responses/Error'
+  /imports/sources:
+    get:
+      operationId: listImportSources
+      responses:
+        '200':
+          $ref: '#/components/responses/Object'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: uploadImportSource
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '201':
+          description: A staged immutable ShitBot SQLite consistent backup, up to 64 MiB. Uploading does not import rows.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Upload' }
+        default:
+          $ref: '#/components/responses/Error'
+  /imports/sources/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ID'
+    delete:
+      operationId: deleteImportSource
+      responses:
+        '204': { description: Staged source removed }
+        default:
+          $ref: '#/components/responses/Error'
+  /imports/previews:
+    post:
+      operationId: previewImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sources]
+              properties:
+                sources:
+                  type: array
+                  minItems: 1
+                  maxItems: 8
+                  items:
+                    type: object
+                    required: [id, network_id, identity_mode]
+                    properties:
+                      id: { type: string }
+                      network_id: { type: string }
+                      identity_mode: { enum: [online, forwarded, offline] }
+                exclude:
+                  type: array
+                  maxItems: 20000
+                  items: { type: string }
+      responses:
+        '201':
+          description: Revision-bound preview, expires after 15 minutes or Core restart. Conflicts require a new preview with explicit row exclusions or corrected sources.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportReport' }
+        default:
+          $ref: '#/components/responses/Error'
+  /imports/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ID'
+    get:
+      operationId: getImportReport
+      responses:
+        '200':
+          description: Preview or durable completed import report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportReport' }
+        default:
+          $ref: '#/components/responses/Error'
+  /imports/{id}/commit:
+    parameters:
+      - $ref: '#/components/parameters/ID'
+    post:
+      operationId: commitImport
+      responses:
+        '200':
+          description: Backed up and committed as one transaction; repeated requests return the same durable report. Does not send bot messages or game actions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportReport' }
+        default:
+          $ref: '#/components/responses/Error'
+  /imports/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/ID'
+    post:
+      operationId: restoreImport
+      responses:
+        '200':
+          description: Removes only unchanged rows added by this job. Later edits cause the whole restore transaction to fail; no automatic kicks or bot messages.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportReport' }
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    Network:
+      in: query
+      name: network_id
+      required: true
+      schema: { type: string }
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+    Offset:
+      in: query
+      name: offset
+      schema: { type: integer, minimum: 0, default: 0 }
+    ID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+  requestBodies:
+    Text:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [text]
+            properties:
+              text: { type: string, maxLength: 2097152 }
+  responses:
+    Object:
+      description: Successful operation
+      content:
+        application/json:
+          schema: { type: object }
+    Error:
+      description: Stable error code and public message. Authentication is required even for local requests.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+    Identity:
+      type: object
+      additionalProperties: false
+      required: [platform, scope, id]
+      properties:
+        platform: { type: string }
+        scope: { type: string }
+        id: { type: string }
+    Player:
+      $ref: ../../bridge/v1/envelope.schema.json#/$defs/player
+    Binding:
+      type: object
+      additionalProperties: false
+      required: [network_id, player]
+      properties:
+        network_id: { type: string }
+        player: { $ref: '#/components/schemas/Player' }
+        owner: { $ref: '#/components/schemas/Identity' }
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+    Document:
+      type: object
+      required: [text, revision]
+      properties:
+        text: { type: string }
+        revision: { type: string, pattern: '^[a-f0-9]{64}$' }
+    Status:
+      type: object
+      required: [component, version, admin_api_version, bridge_protocol_version, instance_id, state, nodes, adapters]
+      properties:
+        component: { const: shitbotteam.ultra.core }
+        version: { type: string }
+        admin_api_version: { const: 1 }
+        bridge_protocol_version: { const: 1 }
+        instance_id: { type: string }
+        state: { enum: [new, starting, running, stopping, stopped, failed] }
+        url: { type: string }
+        started_at: { type: string, format: date-time }
+        nodes: { type: array, items: { type: object } }
+        adapters: { type: array, items: { type: object } }
+        last_error: { type: string }
+    Upload:
+      type: object
+      required: [id, sha256, size]
+      properties:
+        id: { type: string, pattern: '^[a-f0-9]{32}$' }
+        sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        size: { type: integer, maximum: 67108864 }
+    ImportReport:
+      type: object
+      required: [id, revision, expires_at, rows, errors, ready, added, duplicates, conflicts, excluded]
+      properties:
+        id: { type: string }
+        revision: { type: integer }
+        expires_at: { type: string, format: date-time }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [id, sources, record, status]
+            properties:
+              id: { type: string }
+              sources: { type: array, items: { type: string } }
+              record: { $ref: '#/components/schemas/Binding' }
+              status: { enum: [add, duplicate, conflict, excluded] }
+              reason: { type: string }
+        errors: { type: array, items: { type: string } }
+        ready: { type: boolean }
+        added: { type: integer }
+        duplicates: { type: integer }
+        conflicts: { type: integer }
+        excluded: { type: integer }
+        backup: { type: string }
+        committed_at: { type: string, format: date-time }
+        restored_at: { type: string, format: date-time }
+        restore_backup: { type: string }

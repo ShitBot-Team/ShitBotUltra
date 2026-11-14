@@ -29,8 +29,12 @@ func (s *Service) Save(ctx context.Context, node config.Node, snapshot bridge.In
 	if err := binding.ValidatePlayer(snapshot.Player); err != nil {
 		return err
 	}
-	if snapshot.Player.IdentityMode != node.IdentityMode || snapshot.FormatVersion != 1 || len(snapshot.Data) == 0 || len(snapshot.Data) > 2<<20 || !json.Valid(snapshot.Data) {
+	if snapshot.Player.IdentityMode != node.IdentityMode || (snapshot.Player.IdentityMode != "offline" && snapshot.Player.UUID == "") || snapshot.FormatVersion != 1 || len(snapshot.Data) == 0 || len(snapshot.Data) > 2<<20 || !json.Valid(snapshot.Data) {
 		return fault.New("INVALID_INPUT", "背包快照格式、大小或身份无效")
+	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(snapshot.Data, &object); err != nil || object == nil {
+		return fault.New("INVALID_INPUT", "背包数据必须为 JSON 对象")
 	}
 	now := time.Now()
 	if snapshot.CapturedAt.After(now.Add(30*time.Second)) || snapshot.CapturedAt.Before(now.Add(-s.retention)) {
