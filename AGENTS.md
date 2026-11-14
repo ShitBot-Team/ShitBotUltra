@@ -58,4 +58,4 @@
 
 五个 Ultra 仓库各自提供完整的 **AGPL-3.0-only** `LICENSE`。第三方代码、模板、字体与素材保留原许可；普通版 ShitBot 的许可单独维护。具体边界见[许可说明](docs/licensing.md)。
 
-本项目署名为 `ShitBot-Team and contributors`，项目地址为 `https://github.com/ShitBot-Team/ShitBotUltra`。保留 LICENSE 前置的项目版权、组件源码地址与 SPDX 标识，不修改 AGPL 正文里的 FSF 声明，不删除实际贡献者及第三方署名。后续 CLI 版本信息、Desktop / WebUI 关于页按许可说明展示项目署名与许可入口。
+本项目署名为 `ShitBot-Team and contributors`，项目地址为 `https://github.com/ShitBot-Team/ShitBotUltra`。保留 LICENSE 文末的项目版权、组件源码地址与 SPDX 标识，不修改 AGPL 正文里的 FSF 声明，不删除实际贡献者及第三方署名。后续 CLI 版本信息、Desktop / WebUI 关于页按许可说明展示项目署名与许可入口。
