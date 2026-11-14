@@ -44,6 +44,7 @@
 
 ## Git 与交付
 
+- 为新增功能或 Bug 修复提交 PR 前，先在对应组件仓库提交 Issue，让作者了解并沟通后再提 PR；PR 正文必须关联该 Issue。人工与代理辅助贡献遵守相同流程。
 - 使用系统安装的 Git 和已经配置的提交者身份，按职责分批 commit；提交采用 Conventional Commits，描述可中文。不加助手署名或 AI `Co-authored-by`。
 - 使用现有签名配置，失败时不关闭签名。push 后核对 GitHub 返回的 `Verified` / `verification.verified`；本地验签不能代替平台结果。
 - 本次维护者已经授权 commit 后 push，授权在当前文档任务内有效，不重复请求确认。其他任务按其实际授权范围操作。
