@@ -4,6 +4,19 @@ ShitBotUltra Core、CLI、Desktop、Minecraft 与独立 MC API 共五个仓库�
 
 各仓库根目录保留完整的 `LICENSE` 正文，便于独立获取和分发；本文件统一说明项目级许可约定。许可证正文以各仓库 [LICENSE](../LICENSE) 为准。
 
+## 项目版权与署名
+
+项目统一署名为 **ShitBot-Team and contributors**，项目名称为 **ShitBotUltra**，项目地址为 [ShitBot-Team/ShitBotUltra](https://github.com/ShitBot-Team/ShitBotUltra)。五个仓库的 LICENSE 在 AGPL 正文之前列出各自组件名称、以下版权声明、项目地址、组件源码地址及 SPDX 标识：
+
+```text
+Copyright (C) 2026 ShitBot-Team and contributors.
+SPDX-License-Identifier: AGPL-3.0-only
+```
+
+这些前置信息用于说明项目版权与来源，授权条款仍为 AGPL-3.0-only。AGPL 正文中的 Free Software Foundation 版权声明属于许可证文本本身，完整保留。贡献者保留各自贡献的版权，第三方内容继续保留原作者的声明，不因项目统一署名而转移版权。
+
+分发本项目或修改版本时，应保留适用的版权、许可及来源说明；修改版本应注明改动和日期，并按 AGPL 提供该版本的对应源码，不能只用上游项目地址代替修改版源码。后续 CLI 版本信息、Desktop 与 WebUI 关于页统一展示项目名称、版权、项目地址和许可入口；本次只补充文档，不实现界面。[GNU 许可使用指南](https://www.gnu.org/licenses/gpl-howto.en.html)、[AGPL 正文](https://spdx.org/licenses/AGPL-3.0-only.html)
+
 ## 许可范围
 
 - AGPL-3.0 允许商业使用。本项目采用其源码提供与再分发要求，不额外添加“禁止商用”条款。

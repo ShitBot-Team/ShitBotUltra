@@ -52,6 +52,8 @@ Core 集中处理业务；CLI、桌面端、浏览器只是不同操作入口。
 
 ## 开源与统计
 
+Copyright © 2026 ShitBot-Team and contributors. 项目源码：[ShitBotUltra](https://github.com/ShitBot-Team/ShitBotUltra)。项目署名与第三方许可说明见[许可证说明](docs/licensing.md)。
+
 Ultra 五个仓库采用 [AGPL-3.0-only](LICENSE)，历史许可与贡献范围见[许可证说明](docs/licensing.md)。计划公开 Core、CLI、Desktop、Minecraft 插件、MC API、WebUI、协议及构建说明；正常自部署不依赖项目方账号或付费授权服务。第三方机器人服务的条件由各自项目决定。
 
 bStats 计划接入受支持的 Minecraft 平台插件。Ultra 使用独立项目 ID，不沿用普通版统计 ID；ID 和后续接口由维护者提供。具体边界见[统计与外部接口](docs/plan/03-协议配置与迁移.md#6-bstats-与后续接口)。
