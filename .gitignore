@@ -9,4 +9,5 @@
 /cache/
 /logs/
 /backups/
+/imports/
 /config.yaml

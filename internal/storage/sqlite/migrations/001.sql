@@ -35,6 +35,8 @@ CREATE TABLE bind_attempts (
     expires_at INTEGER NOT NULL,
     PRIMARY KEY(network_id, actor_key)
 );
+CREATE INDEX bind_code_expiry ON bind_codes(expires_at);
+CREATE INDEX bind_attempt_expiry ON bind_attempts(expires_at);
 
 CREATE TABLE bridge_cursors (
     node_id TEXT NOT NULL,
@@ -49,6 +51,7 @@ CREATE TABLE consumed_events (
     expires_at INTEGER NOT NULL,
     PRIMARY KEY(source, event_id)
 );
+CREATE INDEX consumed_event_expiry ON consumed_events(expires_at);
 
 CREATE TABLE player_stats (
     network_id TEXT NOT NULL,
@@ -73,6 +76,7 @@ CREATE TABLE inventory_snapshots (
     payload BLOB NOT NULL,
     PRIMARY KEY(network_id, server_id, player_name)
 );
+CREATE INDEX inventory_expiry ON inventory_snapshots(captured_at);
 
 CREATE TABLE import_jobs (
     id TEXT PRIMARY KEY,
