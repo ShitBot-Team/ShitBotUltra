@@ -56,6 +56,6 @@ BREAKING CHANGE: 旧版适配器无法连接，需要同时升级 Minecraft 插�
 
 ## 贡献许可与公共文档
 
-Ultra 四个仓库采用 **AGPL-3.0-only**。新贡献按项目当前许可提供，第三方内容保留原许可与必要声明；历史 MIT 版本及复用边界见[许可证说明](docs/licensing.md)。
+Ultra 五个仓库（Core、CLI、Desktop、Minecraft、MC API）采用 **AGPL-3.0-only**。新贡献按项目当前许可提供，第三方内容保留原许可与必要声明；历史 MIT 版本及模板复用边界见[许可证说明](docs/licensing.md)。
 
-本贡献指南、[Agent 协作规则](agent.md)和公共架构文档只在 `ShitBot-Team/ShitBotUltra` 维护。组件仓库引用这些文件，只保留自己的计划与具体职责，避免多份规范逐渐不一致。
+本贡献指南、[代理执行规范](AGENTS.md)和公共架构文档只在 `ShitBot-Team/ShitBotUltra` 维护。组件 AGENTS.md 保留本地执行限制、职责和公共入口；agent.md 仅作导航，避免多份详细规范逐渐不一致。
