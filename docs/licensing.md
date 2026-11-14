@@ -13,7 +13,7 @@ Copyright (C) 2026 ShitBot-Team and contributors.
 SPDX-License-Identifier: AGPL-3.0-only
 ```
 
-这些前置信息用于说明项目版权与来源，授权条款仍为 AGPL-3.0-only。AGPL 正文中的 Free Software Foundation 版权声明属于许可证文本本身，完整保留。贡献者保留各自贡献的版权，第三方内容继续保留原作者的声明，不因项目统一署名而转移版权。
+这些前置信息放在独立注释区，用于说明项目版权与来源；注释区与完整的 AGPL 正文分开，保留 GitHub 的许可证自动识别。授权条款仍为 AGPL-3.0-only。AGPL 正文中的 Free Software Foundation 版权声明属于许可证文本本身，完整保留。贡献者保留各自贡献的版权，第三方内容继续保留原作者的声明，不因项目统一署名而转移版权。
 
 分发本项目或修改版本时，应保留适用的版权、许可及来源说明；修改版本应注明改动和日期，并按 AGPL 提供该版本的对应源码，不能只用上游项目地址代替修改版源码。后续 CLI 版本信息、Desktop 与 WebUI 关于页统一展示项目名称、版权、项目地址和许可入口；本次只补充文档，不实现界面。[GNU 许可使用指南](https://www.gnu.org/licenses/gpl-howto.en.html)、[AGPL 正文](https://spdx.org/licenses/AGPL-3.0-only.html)
 
