@@ -1,0 +1,12 @@
+/go.work
+/go.work.sum
+*.exe
+*.test
+/coverage*
+/data/
+/secrets/
+/run/
+/cache/
+/logs/
+/backups/
+/config.yaml
