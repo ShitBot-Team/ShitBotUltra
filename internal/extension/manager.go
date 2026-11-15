@@ -122,7 +122,7 @@ func (m *Manager) load(id string) (Plugin, error) {
 		return Plugin{}, fault.New("INVALID_INPUT", "插件标识无效")
 	}
 	var plugin Plugin
-	err := packagefs.ReadJSON(filepath.Join(m.dir, id), "state.json", &plugin)
+	err := packagefs.ReadState(filepath.Join(m.dir, id), &plugin)
 	if errors.Is(err, os.ErrNotExist) {
 		return plugin, fault.New("NOT_FOUND", "插件不存在")
 	}
@@ -254,6 +254,19 @@ func (m *Manager) List() ([]Plugin, error) {
 	}
 	slices.SortFunc(plugins, func(a, b Plugin) int { return strings.Compare(a.ID, b.ID) })
 	return plugins, nil
+}
+
+func (m *Manager) Get(id string) (Plugin, error) {
+	items, err := m.List()
+	if err != nil {
+		return Plugin{}, err
+	}
+	for _, item := range items {
+		if item.ID == id {
+			return item, nil
+		}
+	}
+	return Plugin{}, fault.New("NOT_FOUND", "插件不存在")
 }
 
 func (m *Manager) Enable(ctx context.Context, id, version, revision string, grant sdk.Grant, configuration json.RawMessage) (Plugin, error) {

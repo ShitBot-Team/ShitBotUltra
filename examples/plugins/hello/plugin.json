@@ -1,0 +1,13 @@
+{
+  "api_version": 1,
+  "id": "example.hello",
+  "name": "问候示例",
+  "version": "1.0.0",
+  "author": "ShitBot Team",
+  "project_url": "https://github.com/ShitBot-Team/ShitBotUltra",
+  "license": "AGPL-3.0-only",
+  "entry": "main.js",
+  "capabilities": ["commands"],
+  "commands": [{"name":"hello","arguments":[],"roles":["member"],"require_binding":false,"cooldown_seconds":5}],
+  "config_schema": {"type":"object","properties":{"greeting":{"type":"string","maxLength":128}},"additionalProperties":false}
+}

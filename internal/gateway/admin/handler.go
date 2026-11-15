@@ -63,6 +63,7 @@ func New(engine *bootstrap.Engine, status func() any, listenAddress string) *Han
 	h.mux.HandleFunc("POST /api/v1/imports/{id}/commit", h.commit)
 	h.mux.HandleFunc("POST /api/v1/imports/{id}/restore", h.restore)
 	h.registerRendering()
+	h.registerPlugins()
 	return h
 }
 

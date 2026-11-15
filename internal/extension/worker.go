@@ -122,6 +122,7 @@ func (w *worker) event(event sdk.Event) {
 
 func (w *worker) run() {
 	defer close(w.done)
+	defer w.cancel()
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			w.fail("PLUGIN_PANIC")
@@ -134,19 +135,39 @@ func (w *worker) run() {
 	vm := goja.New()
 	vm.SetMaxCallStackSize(256)
 	var callContext context.Context = w.ctx
+	jsonObject := vm.Get("JSON").ToObject(vm)
+	parse, _ := goja.AssertFunction(jsonObject.Get("parse"))
+	stringify, _ := goja.AssertFunction(jsonObject.Get("stringify"))
 	toValue := func(raw json.RawMessage) goja.Value {
-		var value any
 		if len(raw) == 0 {
 			return goja.Undefined()
 		}
-		if err := json.Unmarshal(raw, &value); err != nil {
+		value, err := parse(goja.Undefined(), vm.ToValue(string(raw)))
+		if err != nil {
 			panic(vm.NewGoError(errors.New("invalid host JSON")))
 		}
-		return vm.ToValue(value)
+		return value
+	}
+	serialize := func(value goja.Value) (json.RawMessage, error) {
+		encoded, err := stringify(goja.Undefined(), value)
+		if err != nil {
+			return nil, err
+		}
+		if goja.IsUndefined(encoded) {
+			return json.RawMessage("null"), nil
+		}
+		data := json.RawMessage(encoded.String())
+		if len(data) > 2<<20 {
+			return nil, errors.New("plugin JSON exceeds limit")
+		}
+		return data, nil
 	}
 	hostCall := func(method string, value goja.Value) goja.Value {
-		data, err := json.Marshal(value.Export())
-		if err != nil || len(data) > 2<<20 {
+		if callContext.Err() != nil || w.ctx.Err() != nil {
+			panic(vm.NewGoError(errors.New("plugin call canceled")))
+		}
+		data, err := serialize(value)
+		if err != nil {
 			panic(vm.NewGoError(errors.New("invalid plugin call data")))
 		}
 		var result json.RawMessage
@@ -180,11 +201,18 @@ func (w *worker) run() {
 		defer stopParent()
 		interrupted := make(chan struct{})
 		stopInterrupt := context.AfterFunc(ctx, func() { vm.Interrupt("deadline exceeded"); close(interrupted) })
-		value, err := fn()
-		if !stopInterrupt() {
-			<-interrupted
+		// JSON conversion can execute getters/toJSON. Keep the interrupt active
+		// until conversion finishes, not just until the callback returns.
+		defer func() {
+			if !stopInterrupt() {
+				<-interrupted
+			}
+			vm.ClearInterrupt()
+		}()
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
-		vm.ClearInterrupt()
+		value, err := fn()
 		if err != nil {
 			return nil, fault.New("PLUGIN_FAILED", "插件执行异常或超时")
 		}
@@ -196,9 +224,12 @@ func (w *worker) run() {
 		if _, promise := value.Export().(*goja.Promise); promise {
 			return nil, fault.New("PLUGIN_FAILED", "插件回调必须返回同步 JSON 结果")
 		}
-		data, err := json.Marshal(value.Export())
-		if err != nil || len(data) > 2<<20 {
+		data, err := serialize(value)
+		if err != nil {
 			return nil, fault.New("PLUGIN_FAILED", "插件返回值不是有界 JSON")
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
 		return data, nil
 	}
@@ -240,14 +271,18 @@ func (w *worker) run() {
 			// Shutdown callbacks have a separate finite budget. Host calls still see
 			// a canceled worker and cannot schedule new actions after disable.
 			vm.ClearInterrupt()
+			callContext = w.ctx
 			shutdown, done := context.WithTimeout(context.Background(), time.Second)
-			stop := context.AfterFunc(shutdown, func() { vm.Interrupt("plugin disabled") })
+			interrupted := make(chan struct{})
+			stop := context.AfterFunc(shutdown, func() { vm.Interrupt("plugin disabled"); close(interrupted) })
 			for _, name := range []string{"disable", "dispose"} {
 				if callback, ok := goja.AssertFunction(exports.Get(name)); ok {
 					_, _ = callback(exports)
 				}
 			}
-			stop()
+			if !stop() {
+				<-interrupted
+			}
 			done()
 			return
 		case <-ticks:
