@@ -135,6 +135,21 @@ func (s *Service) Render(ctx context.Context, request render.Request) (render.Re
 		return render.Result{}, err
 	}
 	manifest := version.Manifest
+	if !request.IgnoreDefaults {
+		defaults, err := s.Catalog.Defaults(request.TemplateID)
+		if err != nil {
+			return render.Result{}, err
+		}
+		if len(request.Theme) == 0 {
+			request.Theme = defaults.Theme
+		}
+		if request.CSS == "" {
+			request.CSS = defaults.CSS
+		}
+		if request.Locale == "" {
+			request.Locale = defaults.Locale
+		}
+	}
 	schema, err := packagefs.Schema(manifest.DataSchema)
 	if err != nil {
 		return render.Result{}, err
@@ -184,7 +199,19 @@ func (s *Service) Render(ctx context.Context, request render.Request) (render.Re
 	if err != nil {
 		return render.Result{}, err
 	}
-	if len(entries) >= 256 {
+	var count int
+	var size int64
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".image") {
+			info, err := entry.Info()
+			if err != nil {
+				return render.Result{}, err
+			}
+			count++
+			size += info.Size()
+		}
+	}
+	if count >= 128 || size+int64(len(output)) > 256<<20 {
 		return render.Result{}, fault.New("CAPACITY_EXCEEDED", "图片缓存数量已满")
 	}
 	id := securefs.ID()
@@ -241,13 +268,23 @@ func (s *Service) cleanupLocked() error {
 			continue
 		}
 		var result render.Result
-		if err := packagefs.ReadJSON(s.dir, entry.Name(), &result); err != nil {
-			return err
-		}
-		if now.After(result.ExpiresAt) {
+		err := packagefs.ReadJSON(s.dir, entry.Name(), &result)
+		if err != nil || now.After(result.ExpiresAt) {
 			id := strings.TrimSuffix(entry.Name(), ".json")
 			_ = os.Remove(filepath.Join(s.dir, id+".image"))
 			_ = os.Remove(filepath.Join(s.dir, entry.Name()))
+		}
+	}
+	// An interrupted metadata write must not reserve cache capacity forever.
+	for _, entry := range entries {
+		if !strings.HasSuffix(entry.Name(), ".image") {
+			continue
+		}
+		id := strings.TrimSuffix(entry.Name(), ".image")
+		if _, err := os.Stat(filepath.Join(s.dir, id+".json")); errors.Is(err, os.ErrNotExist) {
+			if err := os.Remove(filepath.Join(s.dir, entry.Name())); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

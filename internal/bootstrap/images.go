@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -114,7 +115,9 @@ func (e *Engine) sendImage(ctx context.Context, route config.Route, template str
 	_, err = instance.Send(imageCtx, route.Conversation, adapter.Message{Segments: []adapter.Segment{{Type: "image", Data: image}}})
 	if err != nil {
 		e.Events.Publish("delivery.failed", map[string]string{"connection_id": route.ConnectionID})
-		return false
+		// A timeout can follow successful delivery. Do not send a second message
+		// when the adapter cannot establish the result of the first send.
+		return errors.Is(err, adapter.ErrUnknownResult)
 	}
 	return true
 }

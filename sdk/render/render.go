@@ -10,9 +10,9 @@ const APIVersion = 1
 
 // Style is persisted per template and can be overridden by a render request.
 type Style struct {
-	Theme json.RawMessage `json:"theme,omitempty"`
-	CSS string `json:"css,omitempty"`
-	Locale string `json:"locale,omitempty"`
+	Theme  json.RawMessage `json:"theme,omitempty"`
+	CSS    string          `json:"css,omitempty"`
+	Locale string          `json:"locale,omitempty"`
 }
 
 type Attribution struct {
@@ -43,6 +43,8 @@ type Manifest struct {
 
 type Request struct {
 	TemplateID string `json:"template_id"`
+	// IgnoreDefaults allows a preview with deliberately empty CSS/theme/locale.
+	IgnoreDefaults bool `json:"ignore_defaults,omitempty"`
 	// Revision is optional for published templates; drafts must name it explicitly.
 	Revision string          `json:"revision,omitempty"`
 	Data     json.RawMessage `json:"data"`

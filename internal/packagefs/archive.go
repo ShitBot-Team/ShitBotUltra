@@ -274,6 +274,7 @@ func Hash(dir string) (string, error) {
 	defer root.Close()
 	hash := sha256.New()
 	count := 0
+	seen := map[string]bool{}
 	var total int64
 	err = fs.WalkDir(root.FS(), ".", func(name string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -283,9 +284,10 @@ func Hash(dir string) (string, error) {
 			return nil
 		}
 		count++
-		if count > MaxEntries || !SafePath(name) || entry.Type()&os.ModeSymlink != 0 {
+		if count > MaxEntries || !SafePath(name) || seen[strings.ToLower(name)] || entry.Type()&os.ModeSymlink != 0 {
 			return errors.New("invalid installed package")
 		}
+		seen[strings.ToLower(name)] = true
 		if entry.IsDir() {
 			return nil
 		}
@@ -305,10 +307,16 @@ func Hash(dir string) (string, error) {
 		if err != nil {
 			return err
 		}
-		_, err = io.Copy(hash, io.LimitReader(f, MaxFileBytes+1))
-		f.Close()
+		copied, err := io.Copy(hash, io.LimitReader(f, MaxFileBytes+1))
+		closeErr := f.Close()
 		if err != nil {
 			return err
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		if copied != info.Size() {
+			return errors.New("package changed during hashing")
 		}
 		_, _ = hash.Write([]byte{0})
 		return nil
@@ -320,10 +328,20 @@ func Hash(dir string) (string, error) {
 }
 
 func ReadJSON(dir, name string, value any) error {
+	return readJSON(dir, name, value, 256<<10)
+}
+
+// Catalogs contain multiple manifests plus configuration. Their bound is
+// intentionally separate from the bound on a single package manifest.
+func ReadState(dir string, value any) error {
+	return readJSON(dir, "state.json", value, 8<<20)
+}
+
+func readJSON(dir, name string, value any, limit int64) error {
 	if !SafePath(name) {
 		return errors.New("invalid manifest path")
 	}
-	data, err := securefs.ReadFile(filepath.Join(dir, filepath.FromSlash(name)), 256<<10)
+	data, err := securefs.ReadFile(filepath.Join(dir, filepath.FromSlash(name)), limit)
 	if err != nil {
 		return err
 	}

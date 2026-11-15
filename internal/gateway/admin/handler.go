@@ -62,6 +62,7 @@ func New(engine *bootstrap.Engine, status func() any, listenAddress string) *Han
 	h.mux.HandleFunc("GET /api/v1/imports/{id}", h.report)
 	h.mux.HandleFunc("POST /api/v1/imports/{id}/commit", h.commit)
 	h.mux.HandleFunc("POST /api/v1/imports/{id}/restore", h.restore)
+	h.registerRendering()
 	return h
 }
 
@@ -119,7 +120,7 @@ func writeError(w http.ResponseWriter, err error) {
 		e = &fault.Error{Code: "INVALID_INPUT", Message: "请求体超过允许大小"}
 	}
 	switch e.Code {
-	case "INVALID_INPUT", "INVALID_PLAYER", "INVALID_CONFIG", "INVALID_SOURCE":
+	case "INVALID_INPUT", "INVALID_PLAYER", "INVALID_CONFIG", "INVALID_SOURCE", "INVALID_PACKAGE", "INVALID_CODE":
 		status = http.StatusBadRequest
 	case "FORBIDDEN":
 		status = http.StatusForbidden
@@ -129,12 +130,16 @@ func writeError(w http.ResponseWriter, err error) {
 		status = http.StatusConflict
 	case "RATE_LIMITED", "BUSY", "CAPACITY_EXCEEDED":
 		status = http.StatusTooManyRequests
-	case "NODE_OFFLINE":
+	case "NODE_OFFLINE", "UNAVAILABLE", "RENDERER_UNAVAILABLE", "PLUGIN_DISABLED":
 		status = http.StatusServiceUnavailable
 	case "UNSUPPORTED_CAPABILITY":
 		status = http.StatusUnprocessableEntity
-	case "RESULT_UNKNOWN":
+	case "RESULT_UNKNOWN", "DEADLINE_EXCEEDED":
 		status = http.StatusGatewayTimeout
+	case "RENDER_FAILED", "PLUGIN_FAILED", "INVALID_RESPONSE":
+		status = http.StatusBadGateway
+	case "CANCELED":
+		status = http.StatusRequestTimeout
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
 		status = http.StatusGatewayTimeout

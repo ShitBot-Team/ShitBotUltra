@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -26,11 +27,11 @@ type Version struct {
 	Builtin    bool            `json:"builtin"`
 }
 type Template struct {
-	ID        string    `json:"id"`
-	Published string    `json:"published"`
-	Draft     string    `json:"draft"`
-	Revision  string    `json:"revision"`
-	Versions  []Version `json:"versions"`
+	ID        string       `json:"id"`
+	Published string       `json:"published"`
+	Draft     string       `json:"draft"`
+	Revision  string       `json:"revision"`
+	Versions  []Version    `json:"versions"`
 	Defaults  render.Style `json:"defaults"`
 }
 type Catalog struct {
@@ -67,7 +68,7 @@ func validateManifest(m render.Manifest) error {
 }
 
 func Dimensions(width, height int, scale float64, format string) error {
-	if width < 64 || width > 4096 || height < 64 || height > 8192 || scale < 0.5 || scale > 3 || float64(width)*float64(height)*scale*scale > 32e6 || (format != "png" && format != "jpeg") {
+	if math.IsNaN(scale) || math.IsInf(scale, 0) || width < 64 || width > 4096 || height < 64 || height > 8192 || scale < 0.5 || scale > 3 || float64(width)*float64(height)*scale*scale > 32e6 || (format != "png" && format != "jpeg") {
 		return errors.New("invalid render size, scale, pixel count or format")
 	}
 	return nil
@@ -78,7 +79,7 @@ func (c *Catalog) load(id string) (Template, error) {
 		return Template{}, fault.New("INVALID_INPUT", "模板标识无效")
 	}
 	var state Template
-	err := packagefs.ReadJSON(filepath.Join(c.dir, id), "state.json", &state)
+	err := packagefs.ReadState(filepath.Join(c.dir, id), &state)
 	if errors.Is(err, os.ErrNotExist) {
 		return Template{}, fault.New("NOT_FOUND", "模板不存在")
 	}
@@ -130,10 +131,18 @@ func (c *Catalog) install(stage *packagefs.Stage, builtin bool, expected string)
 	} else if err != nil {
 		return Template{}, err
 	}
-	if expected != "" && expected != state.Revision { return Template{}, fault.New("REVISION_CONFLICT", "模板状态已变化") }
+	if expected != "" && expected != state.Revision {
+		return Template{}, fault.New("REVISION_CONFLICT", "模板状态已变化")
+	}
 	for _, version := range state.Versions {
 		if version.Revision == stage.Digest {
-			if expected != "" { state.Draft = stage.Digest; if err := c.save(state); err != nil { return Template{}, err }; return c.load(state.ID) }
+			if expected != "" {
+				state.Draft = stage.Digest
+				if err := c.save(state); err != nil {
+					return Template{}, err
+				}
+				return c.load(state.ID)
+			}
 			return state, nil
 		}
 		if expected == "" && version.Manifest.Version == manifest.Version {
@@ -192,6 +201,12 @@ func (c *Catalog) List() ([]Template, error) {
 	}
 	slices.SortFunc(result, func(a, b Template) int { return strings.Compare(a.ID, b.ID) })
 	return result, nil
+}
+
+func (c *Catalog) Get(id string) (Template, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.load(id)
 }
 
 func (c *Catalog) Publish(id, digest, revision string) (Template, error) {
