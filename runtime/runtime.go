@@ -64,6 +64,10 @@ func New(options Options) (*Runtime, error) {
 		factories[kind] = factory
 	}
 	options.AdapterFactories = factories
+	if options.Updates != nil {
+		updates := *options.Updates
+		options.Updates = &updates
+	}
 	return &Runtime{options: options, done: make(chan struct{}), ready: make(chan struct{}), status: Status{Component: ComponentID, Version: options.Version, AdminAPIVersion: AdminAPIVersion, BridgeProtocolVersion: bridge.Version, State: "new", Nodes: []NodeStatus{}, Adapters: []adapter.Status{}}}, nil
 }
 
@@ -148,6 +152,9 @@ func (r *Runtime) Run(parent context.Context) (runErr error) {
 		return err
 	}
 	defer engine.Close()
+	if err := engine.ConfigureUpdates(r.options.Updates); err != nil {
+		return err
+	}
 	var listen net.ListenConfig
 	listener, err := listen.Listen(ctx, "tcp", cfg.HTTP.Listen)
 	if err != nil {

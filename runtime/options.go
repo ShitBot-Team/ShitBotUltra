@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ShitBot-Team/ShitBotUltra/sdk/adapter"
+	"github.com/ShitBot-Team/ShitBotUltra/sdk/update"
 )
 
 const ComponentID = "shitbotteam.ultra.core"
@@ -21,6 +22,9 @@ type Options struct {
 	// AdapterFactories adds compiled-in protocols without importing internals.
 	// Built-in protocol names cannot be replaced.
 	AdapterFactories map[string]adapter.Factory
+	// Updates belongs to the host executable, not to the Core Go module.
+	// Nil disables network checks and installation APIs.
+	Updates *update.Options
 }
 
 type NodeStatus struct {

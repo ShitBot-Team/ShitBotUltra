@@ -29,6 +29,7 @@ import (
 	"github.com/ShitBot-Team/ShitBotUltra/internal/rendering"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/storage"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/storage/sqlite"
+	"github.com/ShitBot-Team/ShitBotUltra/internal/updating"
 	"github.com/ShitBot-Team/ShitBotUltra/sdk/adapter"
 	sdkextension "github.com/ShitBot-Team/ShitBotUltra/sdk/extension"
 )
@@ -42,6 +43,7 @@ type Engine struct {
 	Inventory   *inventory.Service
 	Renderer    *rendering.Service
 	Plugins     *extension.Manager
+	Updates     *updating.Service
 	Imports     *shitbot.Service
 	Events      *events.Bus
 	Hub         *minecraft.Hub
@@ -145,6 +147,9 @@ func (e *Engine) Start() error {
 		return err
 	}
 	e.Plugins.Start()
+	if e.Updates != nil {
+		e.Updates.Start()
+	}
 	for _, queue := range e.queues {
 		e.wg.Add(1)
 		go func(queue <-chan adapter.Event) {
@@ -217,6 +222,9 @@ func (e *Engine) Close() {
 			e.Hub.Close()
 		}
 		e.wg.Wait()
+		if e.Updates != nil {
+			e.Updates.Close()
+		}
 		if e.Plugins != nil {
 			e.Plugins.Close()
 		}

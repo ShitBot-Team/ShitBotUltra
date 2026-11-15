@@ -64,6 +64,7 @@ func New(engine *bootstrap.Engine, status func() any, listenAddress string) *Han
 	h.mux.HandleFunc("POST /api/v1/imports/{id}/restore", h.restore)
 	h.registerRendering()
 	h.registerPlugins()
+	h.registerUpdates()
 	return h
 }
 
@@ -131,7 +132,7 @@ func writeError(w http.ResponseWriter, err error) {
 		status = http.StatusConflict
 	case "RATE_LIMITED", "BUSY", "CAPACITY_EXCEEDED":
 		status = http.StatusTooManyRequests
-	case "NODE_OFFLINE", "UNAVAILABLE", "RENDERER_UNAVAILABLE", "PLUGIN_DISABLED":
+	case "NODE_OFFLINE", "UNAVAILABLE", "RENDERER_UNAVAILABLE", "PLUGIN_DISABLED", "UPDATE_UNAVAILABLE":
 		status = http.StatusServiceUnavailable
 	case "UNSUPPORTED_CAPABILITY":
 		status = http.StatusUnprocessableEntity
