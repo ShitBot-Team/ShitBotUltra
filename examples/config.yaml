@@ -1,0 +1,62 @@
+# 接入示例：先通过管理页创建下面引用的凭据，再填写真实账号 / 群号。
+# 不覆盖首次启动生成的 admin.token。这里没有可直接使用的默认密码。
+config_version: 1
+webui: true
+http:
+  listen: 127.0.0.1:17880
+  admin_token: file:admin.token
+  allowed_hosts: []
+  allow_insecure_remote: false
+binding:
+  enabled: true
+  code_ttl_seconds: 300
+  max_attempts: 5
+  attempt_window_seconds: 600
+  max_players_per_identity: 3
+  kick_on_unbind: true
+inventory_retention_days: 30
+connections:
+  - id: main-bot
+    type: onebot.v11
+    enabled: true
+    endpoint: ws://127.0.0.1:3001
+    token: file:onebot.token
+    account_id: '123456789'
+    allow_insecure_remote: false
+nodes:
+  - id: survival
+    network_id: main
+    server_id: survival
+    token: file:survival.token
+    identity_mode: offline
+    session_authority: true
+    login_gate: true
+    actions: [chat.send, player.kick, inventory.read, tps.read]
+routes:
+  - id: main-group
+    connection_id: main-bot
+    conversation:
+      platform: qq.numeric
+      scope: global
+      kind: group
+      id: '987654321'
+    node_ids: [survival]
+    to_game: true
+    to_bot: true
+    commands: true
+    notifications: true
+    unbind_on_leave: false
+    bot_prefix: '[游戏] '
+    game_prefix: '[群聊] '
+commands: []
+rendering:
+  # 路径及精确浏览器 product/version 必须一起填写；留空时使用文本回复。
+  browser_path: ''
+  browser_version: ''
+  concurrency: 2
+  queue_size: 8
+  timeout_seconds: 30
+  online_template: baizhou.online
+  profile_template: baizhou.profile
+  inventory_template: ultra.inventory
+  performance_template: baizhou.performance

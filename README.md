@@ -2,7 +2,17 @@
 
 ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重新规划的、可自部署的开源群服互通主程序：由独立 Core 处理机器人连接、业务规则、数据存储、图片渲染和管理功能，Minecraft JAR 负责游戏事件、数据采集及游戏侧动作执行。
 
-**当前阶段：架构规划。五个仓库只维护计划、协作规范和许可证，程序、命令与接口尚未实现。** 本仓库的 [plan.md](plan.md) 是公共计划入口。
+**当前阶段：Core 源码实现与静态审查。** 本仓库已有 Go runtime、OneBot v11、Bridge、绑定 / 白名单、玩家 / 背包、导入、渲染、插件、管理 API 与内置 WebUI。CLI、Desktop、Java MC API 和游戏平台实现仍由对应仓库承担；当前源码未完成构建、测试或联调验收。完整范围见[实现状态](docs/implementation-status.md)，跨仓库计划入口为 [plan.md](plan.md)。
+
+## Core 接入
+
+本仓库是供宿主导入的 Go module，不提供独立 main 程序。使用 Go 1.24，通过公开 `runtime` 包运行；启动、信号、退出与程序安装归 CLI / 服务宿主。首次运行默认监听 `127.0.0.1:17880`，生成配置与管理凭据，页面资源随 Core 嵌入。
+
+- [宿主生命周期、配置与网络要求](docs/runtime.md)、[当前配置示例](examples/config.yaml)
+- [管理 OpenAPI](api/admin/v1/openapi.yaml)、[Bridge v1 接入语义](docs/bridge-v1.md)
+- [图片模板](docs/rendering.md)、[本地插件](docs/plugins.md)、[宿主更新](docs/updates.md)、[WebUI](docs/webui.md)
+
+配置保存后需要宿主重启；图片渲染需要自行配置匹配的 Chromium。管理页面自带本地 Vue runtime，不需要终端用户安装 Node.js。`web/` 提供可选 TypeScript / Vite 入口，页面业务源码目前主要为 JavaScript。按维护者要求，本轮未编译、未运行测试或启动程序。
 
 ## 规划文档
 
@@ -24,7 +34,7 @@ ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重�
 | Desktop | C# + WinUI 3 + XAML | Windows 原生桌面界面，内置 CLI 宿主运行同一份 Core，可选开启 WebUI；Avalonia 为备选 |
 | Minecraft | Java + Maven 多模块 | 薄插件，适配 Bukkit/Paper/Folia、Velocity、BungeeCord、Nukkit-MOT |
 | MC API | 独立 Java API / 客户端 | 集中提供 Core 连接、请求与事件接口，供 Minecraft 端作为依赖调用 |
-| WebUI | TypeScript + Vue 3 + Vite | 浏览器调试与管理页面，构建后随 Core 嵌入 CLI 产物 |
+| WebUI | Vue 3 ES modules，TypeScript / Vite 打包入口 | 管理页面源资源默认嵌入 Core，可由维护者生成优化产物 |
 
 本仓库 `ShitBot-Team/ShitBotUltra` 用作 **Core 仓库与项目入口**，组件分为 [ShitBotUltra-CLI](https://github.com/ShitBot-Team/ShitBotUltra-CLI)、[ShitBotUltra-Desktop](https://github.com/ShitBot-Team/ShitBotUltra-Desktop)、[ShitBotUltra-Minecraft](https://github.com/ShitBot-Team/ShitBotUltra-Minecraft)、[ShitBotUltra-MC-API](https://github.com/ShitBot-Team/ShitBotUltra-MC-API)。公共文档集中在本仓库维护，各组件通过自己的 `plan.md` 和 `AGENTS.md` 引用；`agent.md` 保留为导航。普通版继续留在个人仓库 `hutuyee/ShitBot`。
 
@@ -40,7 +50,7 @@ Core 集中处理业务；CLI、桌面端、浏览器只是不同操作入口。
 
 > 请勿在 SnowLuma、LLBot 等第三方项目的社交群中讨论 ShitBot / ShitBotUltra 或寻求使用、排障支持，以免违反群规。请通过对应项目的 GitHub Issues 反馈：[ShitBot](https://github.com/hutuyee/ShitBot/issues)、[ShitBotUltra](https://github.com/ShitBot-Team/ShitBotUltra/issues)。
 
-后续规划同时覆盖独立的 QQ 官方机器人与 Discord 适配器、本地插件开发与导入、Chromium 自定义图片模板，以及 ShitBot 白名单单文件 / 多文件合并导入；不建设插件市场。CLI、Desktop 与 WebUI 将提供新版本提示和检查 / 升级入口，发行资源按对应文件 SHA-256 校验。详细边界见[扩展计划](docs/plan/06-扩展接口与数据导入.md)和[自动更新计划](docs/plan/03-协议配置与迁移.md#5-自动更新与发行)，这些能力目前均未实现。
+Core 已提供本地插件开发与导入、Chromium 自定义图片模板、ShitBot schema 7 白名单单文件 / 多文件合并导入及更新检查 / 交接接口；不建设插件市场。WebUI 可操作这些接口，发行资源按对应文件 SHA-256 校验，程序替换与回退仍需宿主实现。独立的 QQ 官方机器人与 Discord 适配器仍属后续规划。完整旧版功能迁移和各平台兼容性以[实现状态](docs/implementation-status.md)为准。
 
 ## 参与贡献
 

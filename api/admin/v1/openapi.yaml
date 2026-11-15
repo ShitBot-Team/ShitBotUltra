@@ -2,10 +2,13 @@ openapi: 3.1.0
 info:
   title: ShitBotUltra Core Management API
   version: 1.0.0
+  description: Bearer authentication applies to every API route, including loopback. Host must be allowed; browser
+    Origin must match the listener scheme and Host. JSON bodies are limited to 3 MiB. Raw ZIP and SQLite uploads
+    have separate limits. See docs/runtime.md and docs/implementation-status.md.
 servers:
-  - url: /api/v1
+- url: /api/v1
 security:
-  - bearerAuth: []
+- bearerAuth: []
 paths:
   /status:
     get:
@@ -31,15 +34,19 @@ paths:
     get:
       operationId: streamEvents
       parameters:
-        - in: header
-          name: Last-Event-ID
-          schema: { type: string, pattern: '^[0-9]+$' }
+      - in: header
+        name: Last-Event-ID
+        schema:
+          type: string
+          pattern: ^[0-9]+$
       responses:
         '200':
-          description: SSE with id, event and JSON data; reset means refresh current state. Slow consumers reconnect with Last-Event-ID. Use a streaming fetch with the Authorization header.
+          description: SSE with id, event and JSON data; reset means refresh current state. Slow consumers reconnect
+            with Last-Event-ID. Use a streaming fetch with the Authorization header.
           content:
             text/event-stream:
-              schema: { type: string }
+              schema:
+                type: string
         default:
           $ref: '#/components/responses/Error'
   /config:
@@ -50,7 +57,8 @@ paths:
           description: Configuration source containing secret references, not secret values
           headers:
             ETag:
-              schema: { type: string }
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -60,10 +68,11 @@ paths:
     put:
       operationId: saveConfiguration
       parameters:
-        - in: header
-          name: If-Match
-          required: true
-          schema: { type: string }
+      - in: header
+        name: If-Match
+        required: true
+        schema:
+          type: string
       requestBody:
         $ref: '#/components/requestBodies/Text'
       responses:
@@ -73,10 +82,14 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [document, restart_required]
+                required:
+                - document
+                - restart_required
                 properties:
-                  document: { $ref: '#/components/schemas/Document' }
-                  restart_required: { const: true }
+                  document:
+                    $ref: '#/components/schemas/Document'
+                  restart_required:
+                    const: true
         '428':
           $ref: '#/components/responses/Error'
         default:
@@ -101,10 +114,16 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [name]
+              required:
+              - name
               properties:
-                name: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$' }
-                value: { type: string, minLength: 32, maxLength: 4096 }
+                name:
+                  type: string
+                  pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
+                value:
+                  type: string
+                  description: Optional; trimmed before use. Empty generates a random credential. Nonempty normalized
+                    value must contain 32–4096 UTF-8 bytes and no CR/LF/NUL.
       responses:
         '201':
           description: Created with exclusive access. Generated secret returned only here; never put it in a URL.
@@ -112,19 +131,23 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [reference, value]
+                required:
+                - reference
+                - value
                 properties:
-                  reference: { type: string }
-                  value: { type: string }
+                  reference:
+                    type: string
+                  value:
+                    type: string
         default:
           $ref: '#/components/responses/Error'
   /bindings:
     get:
       operationId: listBindings
       parameters:
-        - $ref: '#/components/parameters/Network'
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Offset'
+      - $ref: '#/components/parameters/Network'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
       responses:
         '200':
           description: Exact case-sensitive bindings, including ownerless whitelist entries
@@ -135,7 +158,8 @@ paths:
                 properties:
                   items:
                     type: array
-                    items: { $ref: '#/components/schemas/Binding' }
+                    items:
+                      $ref: '#/components/schemas/Binding'
         default:
           $ref: '#/components/responses/Error'
     post:
@@ -144,7 +168,8 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/Binding' }
+            schema:
+              $ref: '#/components/schemas/Binding'
       responses:
         '201':
           $ref: '#/components/responses/Object'
@@ -152,60 +177,85 @@ paths:
           $ref: '#/components/responses/Error'
   /bindings/{network}/{name}:
     parameters:
-      - in: path
-        name: network
-        required: true
-        schema: { type: string }
-      - in: path
-        name: name
-        required: true
-        schema: { type: string }
+    - in: path
+      name: network
+      required: true
+      schema:
+        type: string
+    - in: path
+      name: name
+      required: true
+      schema:
+        type: string
     delete:
       operationId: removeBinding
       responses:
         '200':
-          description: Binding removed. Configured kicks are attempted separately; unconfirmed kicks emit an SSE event.
+          description: Binding removed. Configured kicks are attempted separately; unconfirmed kicks emit an SSE
+            event.
           content:
             application/json:
-              schema: { type: object, properties: { removed: { const: true } } }
+              schema:
+                type: object
+                properties:
+                  removed:
+                    const: true
         default:
           $ref: '#/components/responses/Error'
   /players:
     get:
       operationId: listPlayers
       parameters:
-        - $ref: '#/components/parameters/Network'
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Offset'
-        - in: query
-          name: online
-          schema: { type: boolean }
+      - $ref: '#/components/parameters/Network'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      - in: query
+        name: online
+        schema:
+          type: boolean
       responses:
         '200':
-          $ref: '#/components/responses/Object'
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Profile'
         default:
           $ref: '#/components/responses/Error'
   /inventory:
     get:
       operationId: getInventory
       parameters:
-        - $ref: '#/components/parameters/Network'
-        - in: query
-          name: server_id
-          required: true
-          schema: { type: string }
-        - in: query
-          name: player_name
-          required: true
-          schema: { type: string }
+      - $ref: '#/components/parameters/Network'
+      - in: query
+        name: server_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: player_name
+        required: true
+        schema:
+          type: string
       responses:
         '200':
-          $ref: '#/components/responses/Object'
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: ../../bridge/v1/envelope.schema.json#/$defs/inventory_snapshot
         default:
           $ref: '#/components/responses/Error'
   /nodes/{id}/actions:
     parameters:
-      - $ref: '#/components/parameters/ID'
+    - $ref: '#/components/parameters/ID'
     post:
       operationId: requestGameAction
       requestBody:
@@ -215,11 +265,21 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [type, payload]
+              required:
+              - type
+              - payload
               properties:
                 type:
-                  enum: [chat.send, player.kick, command.execute, inventory.read, tps.read, permission.check, placeholder.resolve]
-                payload: { type: object }
+                  enum:
+                  - chat.send
+                  - player.kick
+                  - command.execute
+                  - inventory.read
+                  - tps.read
+                  - permission.check
+                  - placeholder.resolve
+                payload:
+                  type: object
       responses:
         '200':
           $ref: '#/components/responses/Object'
@@ -227,7 +287,8 @@ paths:
           description: RESULT_UNKNOWN must not be automatically retried
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         default:
           $ref: '#/components/responses/Error'
   /imports/sources:
@@ -244,22 +305,27 @@ paths:
         required: true
         content:
           application/octet-stream:
-            schema: { type: string, format: binary }
+            schema:
+              type: string
+              format: binary
       responses:
         '201':
-          description: A staged immutable ShitBot SQLite consistent backup, up to 64 MiB. Uploading does not import rows.
+          description: A staged immutable ShitBot SQLite consistent backup, up to 64 MiB. Uploading does not import
+            rows.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Upload' }
+              schema:
+                $ref: '#/components/schemas/Upload'
         default:
           $ref: '#/components/responses/Error'
   /imports/sources/{id}:
     parameters:
-      - $ref: '#/components/parameters/ID'
+    - $ref: '#/components/parameters/ID'
     delete:
       operationId: deleteImportSource
       responses:
-        '204': { description: Staged source removed }
+        '204':
+          description: Staged source removed
         default:
           $ref: '#/components/responses/Error'
   /imports/previews:
@@ -272,7 +338,8 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [sources]
+              required:
+              - sources
               properties:
                 sources:
                   type: array
@@ -280,26 +347,38 @@ paths:
                   maxItems: 8
                   items:
                     type: object
-                    required: [id, network_id, identity_mode]
+                    required:
+                    - id
+                    - network_id
+                    - identity_mode
                     properties:
-                      id: { type: string }
-                      network_id: { type: string }
-                      identity_mode: { enum: [online, forwarded, offline] }
+                      id:
+                        type: string
+                      network_id:
+                        type: string
+                      identity_mode:
+                        enum:
+                        - online
+                        - forwarded
+                        - offline
                 exclude:
                   type: array
                   maxItems: 20000
-                  items: { type: string }
+                  items:
+                    type: string
       responses:
         '201':
-          description: Revision-bound preview, expires after 15 minutes or Core restart. Conflicts require a new preview with explicit row exclusions or corrected sources.
+          description: Revision-bound preview, expires after 15 minutes or Core restart. Conflicts require a new
+            preview with explicit row exclusions or corrected sources.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ImportReport' }
+              schema:
+                $ref: '#/components/schemas/ImportReport'
         default:
           $ref: '#/components/responses/Error'
   /imports/{id}:
     parameters:
-      - $ref: '#/components/parameters/ID'
+    - $ref: '#/components/parameters/ID'
     get:
       operationId: getImportReport
       responses:
@@ -307,35 +386,569 @@ paths:
           description: Preview or durable completed import report
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ImportReport' }
+              schema:
+                $ref: '#/components/schemas/ImportReport'
         default:
           $ref: '#/components/responses/Error'
   /imports/{id}/commit:
     parameters:
-      - $ref: '#/components/parameters/ID'
+    - $ref: '#/components/parameters/ID'
     post:
       operationId: commitImport
       responses:
         '200':
-          description: Backed up and committed as one transaction; repeated requests return the same durable report. Does not send bot messages or game actions.
+          description: Backed up and committed as one transaction; repeated requests return the same durable report.
+            Does not send bot messages or game actions.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ImportReport' }
+              schema:
+                $ref: '#/components/schemas/ImportReport'
         default:
           $ref: '#/components/responses/Error'
   /imports/{id}/restore:
     parameters:
-      - $ref: '#/components/parameters/ID'
+    - $ref: '#/components/parameters/ID'
     post:
       operationId: restoreImport
       responses:
         '200':
-          description: Removes only unchanged rows added by this job. Later edits cause the whole restore transaction to fail; no automatic kicks or bot messages.
+          description: Removes only unchanged rows added by this job. Later edits cause the whole restore transaction
+            to fail; no automatic kicks or bot messages.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ImportReport' }
+              schema:
+                $ref: '#/components/schemas/ImportReport'
         default:
           $ref: '#/components/responses/Error'
+  /networks:
+    get:
+      operationId: listNetworks
+      responses:
+        '200':
+          description: Scopes from the active configuration, not a pending saved configuration.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Network'
+        default:
+          $ref: '#/components/responses/Error'
+  /webui:
+    get:
+      operationId: getWebUIState
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebUIState'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      operationId: setWebUIState
+      responses:
+        '200':
+          description: Changes the page switch for this session; the authenticated API remains available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebUIState'
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebUIState'
+  /rendering:
+    get:
+      operationId: getRenderingStatus
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - enabled
+                - api_version
+                - providers
+                properties:
+                  enabled:
+                    type: boolean
+                  api_version:
+                    const: 1
+                  providers:
+                    type: array
+                    items:
+                      type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /templates:
+    get:
+      operationId: listTemplates
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: importTemplate
+      responses:
+        '201':
+          description: Imports an immutable version; does not implicitly publish a template or enable a plugin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        $ref: '#/components/requestBodies/ZIP'
+  /templates/{id}:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    get:
+      operationId: getTemplate
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /plugins:
+    get:
+      operationId: listPlugins
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Plugin'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: importPlugin
+      responses:
+        '201':
+          description: Imports an immutable version; does not implicitly publish a template or enable a plugin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plugin'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        $ref: '#/components/requestBodies/ZIP'
+  /plugins/{id}:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    get:
+      operationId: getPlugin
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plugin'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      operationId: removePlugin
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Removes a disabled package; isolated plugin data and last configuration are retained.
+        default:
+          $ref: '#/components/responses/Error'
+  /templates/{id}/files:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    get:
+      operationId: listTemplateFiles
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: string
+        default:
+          $ref: '#/components/responses/Error'
+      parameters:
+      - $ref: '#/components/parameters/ContentRevision'
+  /templates/{id}/file:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    get:
+      operationId: readTemplateFile
+      responses:
+        '200':
+          description: Returns UTF-8 source as JSON, never active HTML on the management origin; maximum 1 MiB.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - text
+                properties:
+                  text:
+                    type: string
+        default:
+          $ref: '#/components/responses/Error'
+      parameters:
+      - $ref: '#/components/parameters/ContentRevision'
+      - in: query
+        name: path
+        required: true
+        schema:
+          type: string
+  /templates/{id}/draft:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    put:
+      operationId: editTemplateDraft
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateDraft'
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+  /templates/{id}/defaults:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    put:
+      operationId: setTemplateDefaults
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Style'
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+  /templates/{id}/publish:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    post:
+      operationId: publishTemplate
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionSelection'
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+  /templates/{id}/restore:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    post:
+      operationId: restoreBuiltinTemplate
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+  /rendering/providers/{id}:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    post:
+      operationId: readRenderingProvider
+      responses:
+        '200':
+          description: Returns core.online/profile/inventory/performance JSON; availability and shape depend on
+            provider.
+          content:
+            application/json:
+              schema: {}
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderRequest'
+  /renders:
+    post:
+      operationId: renderImage
+      responses:
+        '201':
+          description: Temporary raster resource with a 10-minute lifetime; a full cache rejects new resources.
+            Browser failures remain errors.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenderResult'
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenderRequest'
+  /renders/resources/{id}:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    get:
+      operationId: readRenderResource
+      responses:
+        '200':
+          description: Authenticated raster bytes; expired or missing resources return 404.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/Error'
+  /plugins/{id}/enable:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    post:
+      operationId: enablePlugin
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plugin'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnablePlugin'
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+  /plugins/{id}/disable:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    post:
+      operationId: disablePlugin
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plugin'
+          headers:
+            ETag:
+              description: Quoted state revision; send unchanged as If-Match.
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+  /plugins/{id}/providers/{name}:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    - in: path
+      name: name
+      required: true
+      schema:
+        type: string
+    post:
+      operationId: readPluginProvider
+      responses:
+        '200':
+          description: Calls an enabled, declared provider with JSON input; synchronous JSON output, limited to
+            2 MiB.
+          content:
+            application/json:
+              schema: {}
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {}
+  /updates:
+    get:
+      operationId: getUpdateState
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateState'
+        default:
+          $ref: '#/components/responses/Error'
+  /updates/check:
+    post:
+      operationId: checkHostUpdate
+      responses:
+        '200':
+          description: Checks GitHub Releases for the exact host asset. No automatic installation. Refresh GET /updates
+            after an error to retrieve a manual release URL when available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateState'
+        default:
+          $ref: '#/components/responses/Error'
+  /updates/install:
+    post:
+      operationId: installHostUpdate
+      responses:
+        '202':
+          description: Version/digest must match a successful check within one hour. Downloads, verifies, backs
+            up and invokes the host installer asynchronously. handed_off does not mean the new version is running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateState'
+        default:
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - version
+              - sha256
+              properties:
+                version:
+                  type: string
+                sha256:
+                  type: string
+                  pattern: ^[a-f0-9]{64}$
+              additionalProperties: false
 components:
   securitySchemes:
     bearerAuth:
@@ -346,20 +959,44 @@ components:
       in: query
       name: network_id
       required: true
-      schema: { type: string }
+      schema:
+        type: string
     Limit:
       in: query
       name: limit
-      schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 100
     Offset:
       in: query
       name: offset
-      schema: { type: integer, minimum: 0, default: 0 }
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
     ID:
       in: path
       name: id
       required: true
-      schema: { type: string }
+      schema:
+        type: string
+    IfMatch:
+      in: header
+      name: If-Match
+      required: true
+      description: 'Quoted current state revision, not the content version hash. Missing/malformed: 428; stale:
+        409.'
+      schema:
+        type: string
+    ContentRevision:
+      in: query
+      name: revision
+      description: Content SHA-256; omitted selects the published version.
+      schema:
+        type: string
+        pattern: ^[a-f0-9]{64}$
   requestBodies:
     Text:
       required: true
@@ -368,104 +1005,854 @@ components:
           schema:
             type: object
             additionalProperties: false
-            required: [text]
+            required:
+            - text
             properties:
-              text: { type: string, maxLength: 2097152 }
+              text:
+                type: string
+                maxLength: 2097152
+    ZIP:
+      required: true
+      description: Raw ZIP, not multipart. Maximum archive and extracted total 64 MiB; at most 2048 entries, 16
+        MiB per file. Manifest at ZIP root, at most 256 KiB. Rejects links, unsafe paths and case-colliding entries.
+      content:
+        application/zip:
+          schema:
+            type: string
+            format: binary
   responses:
     Object:
       description: Successful operation
       content:
         application/json:
-          schema: { type: object }
+          schema:
+            type: object
     Error:
       description: Stable error code and public message. Authentication is required even for local requests.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
     ErrorResponse:
       type: object
-      required: [error]
+      required:
+      - error
       properties:
         error:
           type: object
-          required: [code, message]
+          required:
+          - code
+          - message
           properties:
-            code: { type: string }
-            message: { type: string }
+            code:
+              type: string
+            message:
+              type: string
     Identity:
       type: object
       additionalProperties: false
-      required: [platform, scope, id]
+      required:
+      - platform
+      - scope
+      - id
       properties:
-        platform: { type: string }
-        scope: { type: string }
-        id: { type: string }
+        platform:
+          type: string
+        scope:
+          type: string
+        id:
+          type: string
     Player:
       $ref: ../../bridge/v1/envelope.schema.json#/$defs/player
     Binding:
       type: object
       additionalProperties: false
-      required: [network_id, player]
+      required:
+      - network_id
+      - player
       properties:
-        network_id: { type: string }
-        player: { $ref: '#/components/schemas/Player' }
-        owner: { $ref: '#/components/schemas/Identity' }
-        created_at: { type: string, format: date-time, readOnly: true }
-        updated_at: { type: string, format: date-time, readOnly: true }
+        network_id:
+          type: string
+        player:
+          $ref: '#/components/schemas/Player'
+        owner:
+          $ref: '#/components/schemas/Identity'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     Document:
       type: object
-      required: [text, revision]
+      required:
+      - text
+      - revision
       properties:
-        text: { type: string }
-        revision: { type: string, pattern: '^[a-f0-9]{64}$' }
+        text:
+          type: string
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
     Status:
       type: object
-      required: [component, version, admin_api_version, bridge_protocol_version, instance_id, state, nodes, adapters]
+      required:
+      - component
+      - version
+      - admin_api_version
+      - bridge_protocol_version
+      - instance_id
+      - state
+      - nodes
+      - adapters
+      - webui_enabled
       properties:
-        component: { const: shitbotteam.ultra.core }
-        version: { type: string }
-        admin_api_version: { const: 1 }
-        bridge_protocol_version: { const: 1 }
-        instance_id: { type: string }
-        state: { enum: [new, starting, running, stopping, stopped, failed] }
-        url: { type: string }
-        started_at: { type: string, format: date-time }
-        nodes: { type: array, items: { type: object } }
-        adapters: { type: array, items: { type: object } }
-        last_error: { type: string }
+        component:
+          const: shitbotteam.ultra.core
+        version:
+          type: string
+        admin_api_version:
+          const: 1
+        bridge_protocol_version:
+          const: 1
+        instance_id:
+          type: string
+        state:
+          enum:
+          - new
+          - starting
+          - running
+          - stopping
+          - stopped
+          - failed
+        url:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        nodes:
+          type: array
+          items:
+            type: object
+        adapters:
+          type: array
+          items:
+            type: object
+        last_error:
+          type: string
+        webui_enabled:
+          type: boolean
     Upload:
       type: object
-      required: [id, sha256, size]
+      required:
+      - id
+      - sha256
+      - size
       properties:
-        id: { type: string, pattern: '^[a-f0-9]{32}$' }
-        sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
-        size: { type: integer, maximum: 67108864 }
+        id:
+          type: string
+          pattern: ^[a-f0-9]{32}$
+        sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        size:
+          type: integer
+          maximum: 67108864
     ImportReport:
       type: object
-      required: [id, revision, expires_at, rows, errors, ready, added, duplicates, conflicts, excluded]
+      required:
+      - id
+      - revision
+      - expires_at
+      - rows
+      - errors
+      - ready
+      - added
+      - duplicates
+      - conflicts
+      - excluded
       properties:
-        id: { type: string }
-        revision: { type: integer }
-        expires_at: { type: string, format: date-time }
+        id:
+          type: string
+        revision:
+          type: integer
+        expires_at:
+          type: string
+          format: date-time
         rows:
           type: array
           items:
             type: object
-            required: [id, sources, record, status]
+            required:
+            - id
+            - sources
+            - record
+            - status
             properties:
-              id: { type: string }
-              sources: { type: array, items: { type: string } }
-              record: { $ref: '#/components/schemas/Binding' }
-              status: { enum: [add, duplicate, conflict, excluded] }
-              reason: { type: string }
-        errors: { type: array, items: { type: string } }
-        ready: { type: boolean }
-        added: { type: integer }
-        duplicates: { type: integer }
-        conflicts: { type: integer }
-        excluded: { type: integer }
-        backup: { type: string }
-        committed_at: { type: string, format: date-time }
-        restored_at: { type: string, format: date-time }
-        restore_backup: { type: string }
+              id:
+                type: string
+              sources:
+                type: array
+                items:
+                  type: string
+              record:
+                $ref: '#/components/schemas/Binding'
+              status:
+                enum:
+                - add
+                - duplicate
+                - conflict
+                - excluded
+              reason:
+                type: string
+        errors:
+          type: array
+          items:
+            type: string
+        ready:
+          type: boolean
+        added:
+          type: integer
+        duplicates:
+          type: integer
+        conflicts:
+          type: integer
+        excluded:
+          type: integer
+        backup:
+          type: string
+        committed_at:
+          type: string
+          format: date-time
+        restored_at:
+          type: string
+          format: date-time
+        restore_backup:
+          type: string
+    WebUIState:
+      type: object
+      required:
+      - enabled
+      properties:
+        enabled:
+          type: boolean
+      additionalProperties: false
+    Network:
+      type: object
+      required:
+      - id
+      - identity_mode
+      - nodes
+      - routes
+      properties:
+        id:
+          type: string
+        identity_mode:
+          enum:
+          - online
+          - forwarded
+          - offline
+        nodes:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - server_id
+            properties:
+              id:
+                type: string
+              server_id:
+                type: string
+        routes:
+          type: array
+          items:
+            type: string
+    Style:
+      type: object
+      properties:
+        theme: {}
+        css:
+          type: string
+          description: At most 64 KiB UTF-8.
+        locale:
+          type: string
+          maxLength: 32
+      additionalProperties: false
+    Attribution:
+      type: object
+      required:
+      - project
+      - author
+      - url
+      properties:
+        project:
+          type: string
+        author:
+          type: string
+        url:
+          type: string
+        revision:
+          type: string
+        modified_at:
+          type: string
+        changes:
+          type: string
+    TemplateManifest:
+      type: object
+      required:
+      - api_version
+      - id
+      - name
+      - version
+      - author
+      - project_url
+      - license
+      - entry
+      - width
+      - height
+      - scale
+      - format
+      properties:
+        api_version:
+          const: 1
+        id:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9_.-]{0,63}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        version:
+          type: string
+          maxLength: 64
+          pattern: ^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?$
+        author:
+          type: string
+          minLength: 1
+          maxLength: 256
+        project_url:
+          type: string
+          format: uri
+          pattern: ^https://
+        license:
+          type: string
+          minLength: 1
+          maxLength: 256
+        entry:
+          type: string
+        width:
+          type: integer
+          minimum: 64
+          maximum: 4096
+        height:
+          type: integer
+          minimum: 64
+          maximum: 8192
+        scale:
+          type: number
+          minimum: 0.5
+          maximum: 3
+        format:
+          enum:
+          - png
+          - jpeg
+        data_schema: {}
+        attributions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribution'
+          maxItems: 32
+      description: Entry is a local HTML file. width × height × scale² must not exceed 32 million pixels. Optional
+        schemas cannot load external references.
+    TemplateVersion:
+      type: object
+      required:
+      - revision
+      - manifest
+      - imported_at
+      - builtin
+      properties:
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        manifest:
+          $ref: '#/components/schemas/TemplateManifest'
+        imported_at:
+          type: string
+          format: date-time
+        builtin:
+          type: boolean
+    Template:
+      type: object
+      required:
+      - id
+      - published
+      - draft
+      - revision
+      - versions
+      - defaults
+      properties:
+        id:
+          type: string
+        published:
+          type: string
+        draft:
+          type: string
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{32}$
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVersion'
+          maxItems: 64
+        defaults:
+          $ref: '#/components/schemas/Style'
+    TemplateDraft:
+      type: object
+      required:
+      - base_revision
+      - files
+      properties:
+        base_revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        files:
+          type: object
+          minProperties: 1
+          maxProperties: 32
+          additionalProperties:
+            type:
+            - string
+            - 'null'
+          description: Relative paths mapped to UTF-8 text (up to 1 MiB per file) or null to delete. Only HTML/CSS/JS/JSON
+            are editable; template.json and license files must be changed by importing a new package.
+      additionalProperties: false
+    VersionSelection:
+      type: object
+      required:
+      - version_revision
+      properties:
+        version_revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      additionalProperties: false
+    RenderRequest:
+      type: object
+      required:
+      - template_id
+      - data
+      properties:
+        template_id:
+          type: string
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        data: {}
+        ignore_defaults:
+          type: boolean
+        theme: {}
+        css:
+          type: string
+          description: At most 64 KiB UTF-8.
+        locale:
+          type: string
+          maxLength: 32
+        width:
+          type: integer
+          minimum: 0
+          maximum: 4096
+        height:
+          type: integer
+          minimum: 0
+          maximum: 8192
+        scale:
+          type: number
+          minimum: 0
+          maximum: 3
+        format:
+          enum:
+          - ''
+          - png
+          - jpeg
+      additionalProperties: false
+      description: Zero/omitted dimensions use the manifest; resolved dimensions follow TemplateManifest limits.
+        Data/theme each at most 2 MiB. Empty style values inherit stored defaults unless ignore_defaults is true.
+    RenderResult:
+      type: object
+      required:
+      - resource_id
+      - mime
+      - width
+      - height
+      - sha256
+      - size
+      - created_at
+      - expires_at
+      properties:
+        resource_id:
+          type: string
+        mime:
+          enum:
+          - image/png
+          - image/jpeg
+        width:
+          type: integer
+        height:
+          type: integer
+        sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        size:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    ProviderRequest:
+      type: object
+      required:
+      - network_id
+      properties:
+        network_id:
+          type: string
+        player_name:
+          type: string
+        server_id:
+          type: string
+        node_ids:
+          type: array
+          items:
+            type: string
+          maxItems: 256
+      description: core.profile needs player_name; core.inventory also needs server_id. core.performance uses all
+        nodes in the network when node_ids is omitted.
+    PluginCommand:
+      type: object
+      required:
+      - name
+      - arguments
+      - roles
+      - require_binding
+      - cooldown_seconds
+      properties:
+        name:
+          type: string
+        arguments:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          maxItems: 16
+        roles:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+        require_binding:
+          type: boolean
+        cooldown_seconds:
+          type: integer
+          minimum: 1
+          maximum: 86400
+    PluginManifest:
+      type: object
+      required:
+      - api_version
+      - id
+      - name
+      - version
+      - author
+      - project_url
+      - license
+      - entry
+      - capabilities
+      properties:
+        api_version:
+          const: 1
+        id:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9_.-]{0,63}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        version:
+          type: string
+          maxLength: 64
+          pattern: ^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?$
+        author:
+          type: string
+          minLength: 1
+          maxLength: 256
+        project_url:
+          type: string
+          format: uri
+          pattern: ^https://
+        license:
+          type: string
+          minLength: 1
+          maxLength: 256
+        entry:
+          type: string
+        capabilities:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          maxItems: 32
+        events:
+          type: array
+          items:
+            type: string
+          maxItems: 64
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/PluginCommand'
+          maxItems: 32
+        providers:
+          type: array
+          items:
+            type: string
+          maxItems: 32
+        tick_seconds:
+          type: integer
+          minimum: 0
+          maximum: 86400
+        config_schema: {}
+      description: Entry is a local JavaScript file. Available capabilities and lifecycle are described in docs/plugins.md.
+    Grant:
+      type: object
+      required:
+      - capabilities
+      - networks
+      - routes
+      - nodes
+      properties:
+        capabilities:
+          type: array
+          items:
+            type: string
+        networks:
+          type: array
+          items:
+            type: string
+        routes:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    StoredGrant:
+      type: object
+      required:
+      - capabilities
+      - networks
+      - routes
+      - nodes
+      properties:
+        capabilities:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+        networks:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+        routes:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+        nodes:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+    PluginVersion:
+      type: object
+      required:
+      - revision
+      - manifest
+      - imported_at
+      properties:
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        manifest:
+          $ref: '#/components/schemas/PluginManifest'
+        imported_at:
+          type: string
+          format: date-time
+    Plugin:
+      type: object
+      required:
+      - id
+      - revision
+      - active_revision
+      - enabled
+      - grant
+      - configuration
+      - versions
+      - dropped
+      properties:
+        id:
+          type: string
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{32}$
+        active_revision:
+          type: string
+        enabled:
+          type: boolean
+        grant:
+          $ref: '#/components/schemas/StoredGrant'
+        configuration: {}
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PluginVersion'
+          maxItems: 32
+        state:
+          type: string
+        last_error:
+          type: string
+        dropped:
+          type: integer
+          minimum: 0
+    EnablePlugin:
+      type: object
+      required:
+      - version_revision
+      - grant
+      - configuration
+      properties:
+        version_revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        grant:
+          $ref: '#/components/schemas/Grant'
+        configuration: {}
+      additionalProperties: false
+    UpdateRelease:
+      type: object
+      required:
+      - version
+      - url
+      - notes
+      - asset_name
+      - size
+      - sha256
+      - available
+      properties:
+        version:
+          type: string
+        url:
+          type: string
+          format: uri
+        notes:
+          type: string
+        asset_name:
+          type: string
+        size:
+          type: integer
+        sha256:
+          type: string
+        available:
+          type: boolean
+    UpdateState:
+      type: object
+      required:
+      - enabled
+      - can_install
+      - repository
+      - current_version
+      - phase
+      properties:
+        enabled:
+          type: boolean
+        can_install:
+          type: boolean
+        repository:
+          type: string
+        current_version:
+          type: string
+        phase:
+          enum:
+          - disabled
+          - idle
+          - checking
+          - downloading
+          - handing_off
+          - handed_off
+          - failed
+        task_id:
+          type: string
+        checked_at:
+          type: string
+          format: date-time
+        release:
+          $ref: '#/components/schemas/UpdateRelease'
+        last_error:
+          type: string
+        backup:
+          type: string
+    Profile:
+      type: object
+      required:
+      - network_id
+      - player
+      - total_seconds
+      - online
+      - last_seen_at
+      - node_id
+      properties:
+        network_id:
+          type: string
+        player:
+          $ref: '#/components/schemas/Player'
+        total_seconds:
+          type: integer
+        online:
+          type: boolean
+        last_seen_at:
+          type: string
+          format: date-time
+        node_id:
+          type: string
+    ManagementEvent:
+      type: object
+      required:
+      - id
+      - type
+      - time
+      - data
+      properties:
+        id:
+          type: integer
+          minimum: 0
+        type:
+          type: string
+        time:
+          type: string
+          format: date-time
+        data: {}
