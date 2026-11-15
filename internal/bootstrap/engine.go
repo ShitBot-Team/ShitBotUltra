@@ -55,6 +55,7 @@ type Engine struct {
 	cancel      context.CancelFunc
 	queues      [4]chan adapter.Event
 	wg          sync.WaitGroup
+	closeOnce   sync.Once
 }
 
 func New(ctx context.Context, dir string, cfg config.Config, cs *config.Store, db *sqlite.Store, logger *slog.Logger, factories map[string]adapter.Factory) (*Engine, error) {
@@ -63,7 +64,7 @@ func New(ctx context.Context, dir string, cfg config.Config, cs *config.Store, d
 	success := false
 	defer func() {
 		if !success {
-			cancel()
+			e.Close()
 		}
 	}()
 	var err error
@@ -101,12 +102,9 @@ func New(ctx context.Context, dir string, cfg config.Config, cs *config.Store, d
 	}
 	e.Plugins, err = extension.New(ctx, dir, e)
 	if err != nil {
-		e.Renderer.Close()
 		return nil, err
 	}
 	if err := e.registerDataProviders(); err != nil {
-		e.Plugins.Close()
-		e.Renderer.Close()
 		return nil, err
 	}
 	r := registry.New()
@@ -213,12 +211,20 @@ func (e *Engine) Start() error {
 }
 
 func (e *Engine) Close() {
-	e.cancel()
-	e.Plugins.Close()
-	e.Renderer.Close()
-	e.Hub.Close()
-	e.wg.Wait()
-	e.Events.Close()
+	e.closeOnce.Do(func() {
+		e.cancel()
+		if e.Hub != nil {
+			e.Hub.Close()
+		}
+		e.wg.Wait()
+		if e.Plugins != nil {
+			e.Plugins.Close()
+		}
+		if e.Renderer != nil {
+			e.Renderer.Close()
+		}
+		e.Events.Close()
+	})
 }
 func (e *Engine) AdapterStatus() []adapter.Status {
 	result := make([]adapter.Status, 0, len(e.Adapters))

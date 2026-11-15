@@ -285,6 +285,7 @@ func (c *Client) Send(ctx context.Context, target adapter.Conversation, message 
 		segments = append(segments, map[string]any{"type": "reply", "data": map[string]string{"id": message.ReplyTo}})
 	}
 	size := 0
+	mediaBytes := 0
 	for _, seg := range message.Segments {
 		typ := seg.Type
 		data := map[string]string{}
@@ -294,8 +295,9 @@ func (c *Client) Send(ctx context.Context, target adapter.Conversation, message 
 			data["text"] = seg.Text
 		case "image":
 			if len(seg.Data) > 0 {
-				if len(seg.Data) > 16<<20 {
-					return adapter.Receipt{}, errors.New("image data too large")
+				mediaBytes += len(seg.Data)
+				if mediaBytes > 16<<20 {
+					return adapter.Receipt{}, errors.New("total image data too large")
 				}
 				data["file"] = "base64://" + base64.StdEncoding.EncodeToString(seg.Data)
 				break
@@ -306,7 +308,7 @@ func (c *Client) Send(ctx context.Context, target adapter.Conversation, message 
 			}
 			data["file"] = seg.URL
 		case "mention":
-			if seg.Target == nil || seg.Target.Platform != "qq.numeric" || seg.Target.Scope != "global" {
+			if seg.Target == nil || seg.Target.Validate() != nil || seg.Target.Platform != "qq.numeric" || seg.Target.Scope != "global" {
 				return adapter.Receipt{}, adapter.ErrUnsupported
 			}
 			typ = "at"

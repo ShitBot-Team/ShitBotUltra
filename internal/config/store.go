@@ -107,7 +107,9 @@ func Secret(dir, ref string) (string, error) {
 		if !info.Mode().IsRegular() {
 			return "", errors.New("secret must be a regular file, not a link")
 		}
-		data, err := securefs.ReadFile(path, 4096)
+		// Secret files may include one trailing line ending in addition to the
+		// maximum 4096-byte credential accepted by the management API.
+		data, err := securefs.ReadFile(path, 4098)
 		if err != nil {
 			return "", fmt.Errorf("secret %s unavailable", ref)
 		}
