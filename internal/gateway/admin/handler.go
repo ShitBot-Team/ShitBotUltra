@@ -65,10 +65,11 @@ func New(engine *bootstrap.Engine, status func() any, listenAddress string) *Han
 	h.registerRendering()
 	h.registerPlugins()
 	h.registerUpdates()
+	h.registerWebUI()
 	return h
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) checkOrigin(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "no-referrer")
@@ -82,7 +83,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if !allowed {
 		writeError(w, fault.New("FORBIDDEN", "Host 不在允许列表中"))
-		return
+		return false
 	}
 	if origin := r.Header.Get("Origin"); origin != "" {
 		u, err := url.Parse(origin)
@@ -92,8 +93,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if err != nil || u.User != nil || u.Host != r.Host || u.Scheme != scheme || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
 			writeError(w, fault.New("FORBIDDEN", "跨源管理请求被拒绝"))
-			return
+			return false
 		}
+	}
+	return true
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !h.checkOrigin(w, r) {
+		return
 	}
 	auth := r.Header.Get("Authorization")
 	if !strings.HasPrefix(auth, "Bearer ") || subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(h.engine.AdminToken)) != 1 {

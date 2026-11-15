@@ -11,3 +11,5 @@
 /backups/
 /imports/
 /config.yaml
+/web/node_modules/
+/internal/webui/optimized/dist/

@@ -12,7 +12,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -358,7 +357,7 @@ func readJSON(dir, name string, value any, limit int64) error {
 }
 
 func Entry(dir, name string) (string, error) {
-	if !SafePath(name) || path.Ext(name) == "" {
+	if !SafePath(name) {
 		return "", errors.New("invalid package entry")
 	}
 	full := filepath.Join(dir, filepath.FromSlash(name))

@@ -1,0 +1,7 @@
+{
+  "package": "vue",
+  "version": "3.5.13",
+  "source": "https://registry.npmjs.org/vue/-/vue-3.5.13.tgz",
+  "integrity": "sha512-wmeiSMxkZCSc+PM2w2VRsOYAZC8GdipNFRTsLSfodVqI9mbejKeXEGr8SckuLnrQPGe3oJN5c3K0vpoU9q/wCQ==",
+  "file_sha256": "beb6a8f2953386b171fb20e5c719e96082f3b0cf29a88d24158f61b824e3c1d4"
+}

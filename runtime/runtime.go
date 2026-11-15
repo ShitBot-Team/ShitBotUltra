@@ -68,6 +68,10 @@ func New(options Options) (*Runtime, error) {
 		updates := *options.Updates
 		options.Updates = &updates
 	}
+	if options.WebUI != nil {
+		enabled := *options.WebUI
+		options.WebUI = &enabled
+	}
 	return &Runtime{options: options, done: make(chan struct{}), ready: make(chan struct{}), status: Status{Component: ComponentID, Version: options.Version, AdminAPIVersion: AdminAPIVersion, BridgeProtocolVersion: bridge.Version, State: "new", Nodes: []NodeStatus{}, Adapters: []adapter.Status{}}}, nil
 }
 
@@ -155,6 +159,9 @@ func (r *Runtime) Run(parent context.Context) (runErr error) {
 	if err := engine.ConfigureUpdates(r.options.Updates); err != nil {
 		return err
 	}
+	if r.options.WebUI != nil {
+		engine.WebUI.SetEnabled(*r.options.WebUI)
+	}
 	var listen net.ListenConfig
 	listener, err := listen.Listen(ctx, "tcp", cfg.HTTP.Listen)
 	if err != nil {
@@ -169,7 +176,9 @@ func (r *Runtime) Run(parent context.Context) (runErr error) {
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/bridge/v1", engine.Hub)
-	mux.Handle("/api/", admin.New(engine, func() any { return r.Status() }, address))
+	management := admin.New(engine, func() any { return r.Status() }, address)
+	mux.Handle("/api/", management)
+	mux.Handle("/", management.Pages())
 	server := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 60 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10, BaseContext: func(net.Listener) context.Context { return ctx }}
 	defer server.Close()
 	if err := engine.Start(); err != nil {
@@ -259,6 +268,7 @@ func (r *Runtime) Status() Status {
 	status.Nodes = []NodeStatus{}
 	status.Adapters = []adapter.Status{}
 	if engine != nil {
+		status.WebUIEnabled = engine.WebUI.Status().Enabled
 		status.Adapters = engine.AdapterStatus()
 		for _, node := range engine.Hub.Status() {
 			status.Nodes = append(status.Nodes, NodeStatus{ID: node.ID, NetworkID: node.NetworkID, ServerID: node.ServerID, Connected: node.Connected, BootID: node.BootID, Platform: node.Platform, Capabilities: node.Capabilities, Since: node.Since})

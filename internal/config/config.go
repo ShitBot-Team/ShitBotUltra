@@ -29,6 +29,7 @@ type Config struct {
 	Commands               []Command    `yaml:"commands" json:"commands"`
 	InventoryRetentionDays int          `yaml:"inventory_retention_days" json:"inventory_retention_days"`
 	Rendering              Rendering    `yaml:"rendering" json:"rendering"`
+	WebUI                  bool         `yaml:"webui" json:"webui"`
 }
 
 type Rendering struct {
@@ -109,6 +110,7 @@ type Command struct {
 func Defaults() Config {
 	return Config{
 		Version: Version,
+		WebUI:   true,
 		HTTP:    HTTP{Listen: "127.0.0.1:17880", AdminToken: "file:admin.token"},
 		Binding: Binding{Enabled: true, CodeTTLSeconds: 300, MaxAttempts: 5,
 			AttemptWindowSeconds: 600, MaxPlayersPerIdentity: 3, KickOnUnbind: true},

@@ -30,6 +30,7 @@ import (
 	"github.com/ShitBot-Team/ShitBotUltra/internal/storage"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/storage/sqlite"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/updating"
+	"github.com/ShitBot-Team/ShitBotUltra/internal/webui"
 	"github.com/ShitBot-Team/ShitBotUltra/sdk/adapter"
 	sdkextension "github.com/ShitBot-Team/ShitBotUltra/sdk/extension"
 )
@@ -44,6 +45,7 @@ type Engine struct {
 	Renderer    *rendering.Service
 	Plugins     *extension.Manager
 	Updates     *updating.Service
+	WebUI       *webui.Service
 	Imports     *shitbot.Service
 	Events      *events.Bus
 	Hub         *minecraft.Hub
@@ -63,6 +65,7 @@ type Engine struct {
 func New(ctx context.Context, dir string, cfg config.Config, cs *config.Store, db *sqlite.Store, logger *slog.Logger, factories map[string]adapter.Factory) (*Engine, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	e := &Engine{Config: cfg, ConfigStore: cs, DB: db, Dir: dir, logger: logger, ctx: ctx, cancel: cancel, Events: events.New(), Adapters: map[string]adapter.Adapter{}, commands: command.New(), router: forwarding.New(cfg.Routes)}
+	e.WebUI = webui.New(cfg.WebUI)
 	success := false
 	defer func() {
 		if !success {

@@ -25,6 +25,9 @@ type Options struct {
 	// Updates belongs to the host executable, not to the Core Go module.
 	// Nil disables network checks and installation APIs.
 	Updates *update.Options
+	// WebUI overrides the initial page switch; the authenticated API can change
+	// it later. Nil uses the persisted configuration.
+	WebUI *bool
 }
 
 type NodeStatus struct {
@@ -50,6 +53,7 @@ type Status struct {
 	Nodes                 []NodeStatus     `json:"nodes"`
 	Adapters              []adapter.Status `json:"adapters"`
 	LastError             string           `json:"last_error,omitempty"`
+	WebUIEnabled          bool             `json:"webui_enabled"`
 }
 
 type Validation struct {
