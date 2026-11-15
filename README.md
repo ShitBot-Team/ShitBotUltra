@@ -1,69 +1,36 @@
 # ShitBotUltra
 
-ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重新规划的、可自部署的开源群服互通主程序：由独立 Core 处理机器人连接、业务规则、数据存储、图片渲染和管理功能，Minecraft JAR 负责游戏事件、数据采集及游戏侧动作执行。
+ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重新规划的一个由GoLang写的主程序
 
-**当前阶段：Core 源码实现与静态审查。** 本仓库已有 Go runtime、OneBot v11、Bridge、绑定 / 白名单、玩家 / 背包、导入、渲染、插件、管理 API 与内置 WebUI。CLI、Desktop、Java MC API 和游戏平台实现仍由对应仓库承担；当前源码未完成构建、测试或联调验收。完整范围见[实现状态](docs/implementation-status.md)，跨仓库计划入口为 [plan.md](plan.md)。
+> [!Warning]
+>
+> 请勿在 SnowLuma、LLBot 等第三方项目的社交群中讨论 ShitBotUltra 项目或寻求使用、排障支持，以免违反群规。ShitBot 相关问题请通过本项目的 [GitHub Issues](https://github.com/ShitBot-Team/ShitBotUltra/issues) 反馈。
+>
+> 本插件由AI辅助完成，如有缺陷可提出
+>
 
-## Core 接入
+## 下载
 
-本仓库是供宿主导入的 Go module，不提供独立 main 程序。使用 Go 1.24，通过公开 `runtime` 包运行；启动、信号、退出与程序安装归 CLI / 服务宿主。首次运行默认监听 `127.0.0.1:17880`，生成配置与管理凭据，页面资源随 Core 嵌入。
+从 [GitHub Releases](https://github.com/ShitBot-Team/ShitBotUltra/releases) 下载对应的主程序版本
 
-- [宿主生命周期、配置与网络要求](docs/runtime.md)、[当前配置示例](examples/config.yaml)
-- [管理 OpenAPI](api/admin/v1/openapi.yaml)、[Bridge v1 接入语义](docs/bridge-v1.md)
-- [图片模板](docs/rendering.md)、[本地插件](docs/plugins.md)、[宿主更新](docs/updates.md)、[WebUI](docs/webui.md)
+### 适配系统
 
-配置保存后需要宿主重启；图片渲染需要自行配置匹配的 Chromium。管理页面自带本地 Vue runtime，不需要终端用户安装 Node.js。`web/` 提供可选 TypeScript / Vite 入口，页面业务源码目前主要为 JavaScript。按维护者要求，本轮未编译、未运行测试或启动程序。
-
-## 规划文档
-
-| 文档 | 内容 |
-| --- | --- |
-| [总体规划](docs/plan/01-总体规划.md) | 需求、语言选择、五仓库拆分、进程架构、实施顺序 |
-| [仓库结构与开发规范](docs/plan/02-仓库结构与开发规范.md) | Core、CLI、Desktop、Minecraft 的目录、依赖、命名及提交规范 |
-| [协议配置与迁移](docs/plan/03-协议配置与迁移.md) | 双向通信、桌面配置管理、功能迁移、bStats 和待提供接口 |
-| [思维导图](docs/plan/04-思维导图.md) | Mermaid 思维导图与纯文本版本 |
-| [参考项目与依据](docs/plan/05-参考项目与依据.md) | 当前 ShitBot 依据、官方资料、借鉴方式和取舍 |
-| [扩展接口与数据导入](docs/plan/06-扩展接口与数据导入.md) | 本地插件、可扩展适配器、Chromium 自定义模板、白名单合并及独立 Java API |
-
-## 推荐组成
-
-| 组件 | 语言与形式 | 主要职责 |
-| --- | --- | --- |
-| Core | Go | 统一业务引擎、协议、数据库、管理 API、内置 WebUI 资源 |
-| CLI | Go + 标准库 `flag` | 参考 LuckyLillia.CLI 的轻量入口，直接运行即可启动 Core、显示日志和本机 WebUI 地址 |
-| Desktop | C# + WinUI 3 + XAML | Windows 原生桌面界面，内置 CLI 宿主运行同一份 Core，可选开启 WebUI；Avalonia 为备选 |
-| Minecraft | Java + Maven 多模块 | 薄插件，适配 Bukkit/Paper/Folia、Velocity、BungeeCord、Nukkit-MOT |
-| MC API | 独立 Java API / 客户端 | 集中提供 Core 连接、请求与事件接口，供 Minecraft 端作为依赖调用 |
-| WebUI | Vue 3 ES modules，TypeScript / Vite 打包入口 | 管理页面源资源默认嵌入 Core，可由维护者生成优化产物 |
-
-本仓库 `ShitBot-Team/ShitBotUltra` 用作 **Core 仓库与项目入口**，组件分为 [ShitBotUltra-CLI](https://github.com/ShitBot-Team/ShitBotUltra-CLI)、[ShitBotUltra-Desktop](https://github.com/ShitBot-Team/ShitBotUltra-Desktop)、[ShitBotUltra-Minecraft](https://github.com/ShitBot-Team/ShitBotUltra-Minecraft)、[ShitBotUltra-MC-API](https://github.com/ShitBot-Team/ShitBotUltra-MC-API)。公共文档集中在本仓库维护，各组件通过自己的 `plan.md` 和 `AGENTS.md` 引用；`agent.md` 保留为导航。普通版继续留在个人仓库 `hutuyee/ShitBot`。
-
-源码命名采用 `shitbotteam.ultra.<组件名>`：Minecraft 根包为 `shitbotteam.ultra.minecraft`，C# Desktop 根命名空间为 `shitbotteam.ultra.desktop`；Core、CLI、WebUI 对应 `core`、`cli`、`webui`。Go 的模块导入路径仍遵循 Go 规则，具体映射见[命名规范](docs/plan/02-仓库结构与开发规范.md#6-命名与中文信息)。
-
-Core 集中处理业务；CLI、桌面端、浏览器只是不同操作入口。CLI 采用 [LuckyLillia.CLI](https://github.com/LLOneBot/LuckyLillia.CLI) 这种“启动程序、看日志、用少量参数控制”的体验，使用 Go 标准库解析参数，日常管理主要使用内置 WebUI。Desktop 默认使用 C# + WinUI 3 原生界面，通过同一个 Core 管理配置，按需开启浏览器 WebUI。若以后需要跨平台或 WinUI 的部署条件不合适，再改用 C# + Avalonia；Avalonia 使用自绘控件，不称为 Windows 原生控件。具体取舍见[语言选型](docs/plan/01-总体规划.md#2-编程语言与技术选型)。
-
-## 机器人实现与支持边界
-
-新用户推荐使用 [SnowLuma](https://github.com/SnowLuma/SnowLuma)，首期通过 OneBot v11 正向 WebSocket 对接。其他兼容实现也可作为候选；具体能力以之后的兼容记录为准。
-
-按项目维护者提供的信息，LLBot 已不再开放新用户注册；已有可用环境的用户仍可将 [LLBot / LuckyLilliaBot](https://github.com/LLOneBot/LuckyLilliaBot) 作为兼容选项。Core 以协议适配，避免把某个机器人实现写死在业务中。
-
-> 请勿在 SnowLuma、LLBot 等第三方项目的社交群中讨论 ShitBot / ShitBotUltra 或寻求使用、排障支持，以免违反群规。请通过对应项目的 GitHub Issues 反馈：[ShitBot](https://github.com/hutuyee/ShitBot/issues)、[ShitBotUltra](https://github.com/ShitBot-Team/ShitBotUltra/issues)。
-
-Core 已提供本地插件开发与导入、Chromium 自定义图片模板、ShitBot schema 7 白名单单文件 / 多文件合并导入及更新检查 / 交接接口；不建设插件市场。WebUI 可操作这些接口，发行资源按对应文件 SHA-256 校验，程序替换与回退仍需宿主实现。独立的 QQ 官方机器人与 Discord 适配器仍属后续规划。完整旧版功能迁移和各平台兼容性以[实现状态](docs/implementation-status.md)为准。
+| 系统      | 状态                                               |
+|---------|--------------------------------------------------|
+| Windows | ![](https://img.shields.io/badge/Working-469C00) |
+| Linux   | ![](https://img.shields.io/badge/Waiting-E6DD09) |
+| Mac     | ![](https://img.shields.io/badge/Waiting-E6DD09) |
 
 ## 参与贡献
 
-欢迎提交 PR，改进代码、修复问题或补充文档，也欢迎 AI 辅助编写的贡献。提交信息与 PR 标题使用 Conventional Commits，描述和正文可以写中文，例如 `fix(minecraft): 修复重复进服通知`、`docs: 补充部署说明`。
+欢迎提交 PR，改进代码、修复问题或补充文档，也欢迎 AI 辅助编写的贡献
 
-**新增功能或修复 Bug，请先在对应组件仓库提交 Issue，让作者了解并沟通后再提交 PR，并在 PR 中关联该 Issue。**
+**新增功能或修复 Bug，请先在对应组件仓库提交 Issue，让作者了解并沟通后再提交 PR，并在 PR 中关联该 Issue**
 
-一个 PR 聚焦一个明确目的，说明修改原因、影响及实际验证情况；未运行测试时如实注明。人工与 AI 辅助贡献遵守同样的规则，具体格式和简明 PR 约定见[贡献指南](CONTRIBUTING.md)。
+一个 PR 聚焦一个明确目的，说明修改原因、影响及实际验证情况；未运行测试时如实注明，具体格式和简明 PR 约定见[贡献指南](CONTRIBUTING.md)
 
-## 开源与统计
+## License
 
-Copyright © 2026 ShitBot-Team and contributors. 项目源码：[ShitBotUltra](https://github.com/ShitBot-Team/ShitBotUltra)。项目署名与第三方许可说明见[许可证说明](docs/licensing.md)。
+Copyright © 2026 ShitBot-Team and contributors.
 
-Ultra 五个仓库采用 [AGPL-3.0-only](LICENSE)，历史许可与贡献范围见[许可证说明](docs/licensing.md)。计划公开 Core、CLI、Desktop、Minecraft 插件、MC API、WebUI、协议及构建说明；正常自部署不依赖项目方账号或付费授权服务。第三方机器人服务的条件由各自项目决定。
-
-bStats 计划接入受支持的 Minecraft 平台插件。Ultra 使用独立项目 ID，不沿用普通版统计 ID；ID 和后续接口由维护者提供。具体边界见[统计与外部接口](docs/plan/03-协议配置与迁移.md#6-bstats-与后续接口)。
+AGPL-3.0-only
