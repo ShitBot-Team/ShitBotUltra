@@ -157,3 +157,22 @@ func (s *Service) List(ctx context.Context, network string, onlineOnly bool, lim
 	}
 	return result, rows.Err()
 }
+
+func (s *Service) Get(ctx context.Context, network, name string) (Profile, error) {
+	var profile Profile
+	var started sql.NullInt64
+	var seen int64
+	err := s.db.QueryRowContext(ctx, "SELECT network_id,player_name,player_uuid,identity_mode,total_seconds,session_started_at,last_seen_at,node_id FROM player_stats WHERE network_id=? AND player_name=?", network, name).Scan(&profile.NetworkID, &profile.Player.Name, &profile.Player.UUID, &profile.Player.IdentityMode, &profile.TotalSeconds, &started, &seen, &profile.NodeID)
+	if err == sql.ErrNoRows {
+		return profile, fault.New("NOT_FOUND", "尚无此玩家的游戏会话记录")
+	}
+	if err != nil {
+		return profile, err
+	}
+	profile.Online = started.Valid
+	if started.Valid && time.Now().UnixMilli() > started.Int64 {
+		profile.TotalSeconds += (time.Now().UnixMilli() - started.Int64) / 1000
+	}
+	profile.LastSeenAt = time.UnixMilli(seen).UTC()
+	return profile, nil
+}

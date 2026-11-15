@@ -108,3 +108,18 @@ type Command struct {
 	Command string `json:"command"`
 	ActorID string `json:"actor_id"`
 }
+
+// ServerPerformance contains metrics sampled by the Minecraft platform adapter.
+// TPS is Minecraft ticks per second, never Core throughput or request rate.
+// A nil TPS means the game platform cannot provide a TPS measurement.
+type ServerPerformance struct {
+	MeasuredAt      time.Time `json:"measured_at"`
+	TPS             *float64  `json:"tps"`
+	TPS5Minutes     *float64  `json:"tps_5m,omitempty"`
+	TPS15Minutes    *float64  `json:"tps_15m,omitempty"`
+	MSPT            *float64  `json:"mspt,omitempty"`
+	OnlinePlayers   int       `json:"online_players"`
+	MaxPlayers      int       `json:"max_players"`
+	UsedMemoryBytes int64     `json:"used_memory_bytes,omitempty"`
+	MaxMemoryBytes  int64     `json:"max_memory_bytes,omitempty"`
+}

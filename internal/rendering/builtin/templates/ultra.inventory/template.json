@@ -1,0 +1,15 @@
+{
+  "api_version": 1,
+  "id": "ultra.inventory",
+  "name": "Minecraft 玩家背包",
+  "version": "1.0.0",
+  "author": "ShitBot Team",
+  "project_url": "https://github.com/ShitBot-Team/ShitBotUltra",
+  "license": "AGPL-3.0-only",
+  "entry": "index.html",
+  "width": 900,
+  "height": 1100,
+  "scale": 1,
+  "format": "png",
+  "data_schema": { "type": "object", "required": ["player", "captured_at", "data"] }
+}

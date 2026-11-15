@@ -1,0 +1,27 @@
+{
+  "api_version": 1,
+  "id": "baizhou.profile",
+  "name": "玩家统计资料卡",
+  "version": "1.0.0",
+  "author": "BaiZhouziYou",
+  "project_url": "https://github.com/BaizhouziYou/easybot-image-templates",
+  "license": "AGPL-3.0-only",
+  "entry": "index.html",
+  "width": 900,
+  "height": 1200,
+  "scale": 1,
+  "format": "png",
+  "data_schema": {
+    "type": "object"
+  },
+  "attributions": [
+    {
+      "changes": "基于 EasyBot Image Templates。保留 HTML/CSS 布局；以 Ultra 上下文和 ready 回调替换 EasyBot API、脚本及渲染逻辑；不包含上游封面、预览、字体或第三方脚本，使用系统字体。",
+      "revision": "f1a8fd107adfabd402102a9ce7c32b4e136cdd0e",
+      "author": "BaiZhouziYou",
+      "project": "EasyBot Image Templates",
+      "modified_at": "2026-11-14",
+      "url": "https://github.com/BaizhouziYou/easybot-image-templates"
+    }
+  ]
+}

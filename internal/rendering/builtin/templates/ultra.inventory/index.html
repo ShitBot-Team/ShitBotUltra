@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>Minecraft 玩家背包</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101a20;color:#eaf2f5;font:22px "Microsoft YaHei","Noto Sans",sans-serif;padding:48px}h1{font-size:44px;overflow-wrap:anywhere;margin:0 0 14px}.meta{color:#a6becb;font-size:18px;line-height:1.7;margin-bottom:32px}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.slot{min-height:112px;padding:12px;border:1px solid #526976;border-radius:12px;background:#20313d;overflow-wrap:anywhere}.slot small{display:block;color:#91b6c5;font-size:14px}.slot strong{display:block;font-size:16px;margin:9px 0}.empty{background:#142630}.note{color:#9ab2be;font-size:18px;margin-top:24px}
+</style>
+<h1 id="name"></h1><div class="meta" id="captured"></div><div class="grid" id="slots"></div><p class="note" id="note"></p>
+<script>
+(() => {
+  const snapshot=ultra.context.data;
+  document.getElementById("name").textContent=String(snapshot.player?.name || "未知玩家")+" 的背包";
+  document.getElementById("captured").textContent="采集时间："+new Date(snapshot.captured_at).toLocaleString(ultra.context.locale);
+  const items=Array.isArray(snapshot.data.items)?snapshot.data.items:Array.isArray(snapshot.data.slots)?snapshot.data.slots:[];
+  const grid=document.getElementById("slots");
+  items.slice(0,42).forEach((item,index)=>{const cell=document.createElement("div");cell.className="slot"+(item?"":" empty");const slot=document.createElement("small");slot.textContent="槽位 "+(item?.slot ?? index);const label=document.createElement("strong");label.textContent=item?String(item.display_name || item.name || item.id || "物品"):"空";const count=document.createElement("small");count.textContent=item?"× "+String(item.count ?? item.amount ?? 1):"";cell.append(slot,label,count);grid.append(cell)});
+  document.getElementById("note").textContent=items.length>42?"另外 "+(items.length-42)+" 个槽位未在本图展开":items.length?"物品信息来自 Minecraft 节点快照。":"此快照没有可展示的 items / slots 数据。";
+  ultra.ready();
+})();
+</script>
+</html>

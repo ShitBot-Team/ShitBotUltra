@@ -19,15 +19,18 @@ import (
 	"github.com/ShitBot-Team/ShitBotUltra/internal/command"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/config"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/events"
+	"github.com/ShitBot-Team/ShitBotUltra/internal/extension"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/fault"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/forwarding"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/gateway/minecraft"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/importer/shitbot"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/inventory"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/player"
+	"github.com/ShitBot-Team/ShitBotUltra/internal/rendering"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/storage"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/storage/sqlite"
 	"github.com/ShitBot-Team/ShitBotUltra/sdk/adapter"
+	sdkextension "github.com/ShitBot-Team/ShitBotUltra/sdk/extension"
 )
 
 type Engine struct {
@@ -37,6 +40,8 @@ type Engine struct {
 	Bindings    *binding.Service
 	Players     *player.Service
 	Inventory   *inventory.Service
+	Renderer    *rendering.Service
+	Plugins     *extension.Manager
 	Imports     *shitbot.Service
 	Events      *events.Bus
 	Hub         *minecraft.Hub
@@ -86,6 +91,24 @@ func New(ctx context.Context, dir string, cfg config.Config, cs *config.Store, d
 	e.Inventory = inventory.New(db, cfg.InventoryRetentionDays)
 	e.Imports = shitbot.New(db, dir, cfg.Binding.MaxPlayersPerIdentity, networks)
 	e.Hub = minecraft.New(ctx, db, cfg.Nodes, tokens, e)
+	browserPath := cfg.Rendering.BrowserPath
+	if browserPath != "" {
+		browserPath = config.ResolvePath(dir, browserPath)
+	}
+	e.Renderer, err = rendering.New(ctx, dir, rendering.Options{BrowserPath: browserPath, BrowserVersion: cfg.Rendering.BrowserVersion, Concurrency: cfg.Rendering.Concurrency, QueueSize: cfg.Rendering.QueueSize, Timeout: time.Duration(cfg.Rendering.TimeoutSeconds) * time.Second})
+	if err != nil {
+		return nil, err
+	}
+	e.Plugins, err = extension.New(ctx, dir, e)
+	if err != nil {
+		e.Renderer.Close()
+		return nil, err
+	}
+	if err := e.registerDataProviders(); err != nil {
+		e.Plugins.Close()
+		e.Renderer.Close()
+		return nil, err
+	}
 	r := registry.New()
 	if err := r.Register("onebot.v11", onebotv11.New); err != nil {
 		return nil, err
@@ -123,6 +146,7 @@ func (e *Engine) Start() error {
 	if err := e.Players.Recover(e.ctx); err != nil {
 		return err
 	}
+	e.Plugins.Start()
 	for _, queue := range e.queues {
 		e.wg.Add(1)
 		go func(queue <-chan adapter.Event) {
@@ -188,7 +212,14 @@ func (e *Engine) Start() error {
 	return nil
 }
 
-func (e *Engine) Close() { e.cancel(); e.Hub.Close(); e.wg.Wait(); e.Events.Close() }
+func (e *Engine) Close() {
+	e.cancel()
+	e.Plugins.Close()
+	e.Renderer.Close()
+	e.Hub.Close()
+	e.wg.Wait()
+	e.Events.Close()
+}
 func (e *Engine) AdapterStatus() []adapter.Status {
 	result := make([]adapter.Status, 0, len(e.Adapters))
 	for _, a := range e.Adapters {
@@ -200,10 +231,12 @@ func (e *Engine) AdapterStatus() []adapter.Status {
 
 func (e *Engine) GameConnected(ctx context.Context, node config.Node, boot string) {
 	e.Events.Publish("node.connected", map[string]string{"node_id": node.ID})
+	e.Plugins.Emit(sdkextension.Event{Type: "node.connected", NetworkID: node.NetworkID, NodeID: node.ID, Data: json.RawMessage(`{}`)})
 }
 func (e *Engine) GameDisconnected(ctx context.Context, node config.Node, boot string) {
 	_ = e.Players.Disconnect(ctx, node.ID, boot)
 	e.Events.Publish("node.disconnected", map[string]string{"node_id": node.ID})
+	e.Plugins.Emit(sdkextension.Event{Type: "node.disconnected", NetworkID: node.NetworkID, NodeID: node.ID, Data: json.RawMessage(`{}`)})
 }
 func (e *Engine) GameHeartbeat(ctx context.Context, node config.Node, boot string) {
 	_ = e.Players.Heartbeat(ctx, node.ID, boot)
@@ -255,6 +288,7 @@ func (e *Engine) HandleGame(ctx context.Context, node config.Node, envelope brid
 			}
 		}
 		e.Events.Publish("players.changed", map[string]string{"network_id": node.NetworkID})
+		e.Plugins.Emit(sdkextension.Event{Type: envelope.Type, NetworkID: node.NetworkID, NodeID: node.ID, Data: append(json.RawMessage(nil), envelope.Payload...)})
 		return nil, nil
 	case "inventory.snapshot":
 		var snapshot bridge.InventorySnapshot
@@ -359,6 +393,11 @@ func (e *Engine) handleBot(ctx context.Context, event adapter.Event) {
 	if event.Type != "message" {
 		return
 	}
+	for _, route := range routes {
+		node, _ := e.Config.Node(route.NodeIDs[0])
+		data, _ := json.Marshal(event)
+		e.Plugins.Emit(sdkextension.Event{Type: "message", NetworkID: node.NetworkID, RouteID: route.ID, Data: data})
+	}
 	text := strings.TrimSpace(event.Message.PlainText())
 	if strings.HasPrefix(text, "/") {
 		for _, route := range routes {
@@ -397,9 +436,12 @@ func (e *Engine) botCommand(ctx context.Context, event adapter.Event, route conf
 	node, _ := e.Config.Node(route.NodeIDs[0])
 	network := node.NetworkID
 	fail := func(err error) { reply(fault.Public(err).Message) }
+	if e.imageCommand(ctx, event, route, network, args) {
+		return
+	}
 	switch args[0] {
 	case "help":
-		reply("/bind \"玩家名\" 验证码\n/unbind \"玩家名\"\n/bindings\n/online")
+		reply("/bind \"玩家名\" 验证码\n/unbind \"玩家名\"\n/bindings\n/online\n/profile [\"玩家名\"]\n/inventory [\"玩家名\"]\n/tps（Minecraft 服务器 TPS）")
 	case "bind":
 		if len(args) != 3 {
 			reply("用法：/bind \"玩家名\" 验证码")
@@ -449,6 +491,9 @@ func (e *Engine) botCommand(ctx context.Context, event adapter.Event, route conf
 		for _, p := range players {
 			names = append(names, p.Player.Name)
 		}
+		if e.sendImage(ctx, route, e.Config.Rendering.OnlineTemplate, map[string]any{"network_id": network, "players": players, "updated_at": time.Now().UTC()}) {
+			return
+		}
 		reply(forwarding.Clean(fmt.Sprintf("在线玩家 %d：%s", len(names), strings.Join(names, "、")), 3000))
 	default:
 		for _, c := range e.Config.Commands {
@@ -481,7 +526,9 @@ func (e *Engine) botCommand(ctx context.Context, event adapter.Event, route conf
 			reply("游戏节点已确认执行。")
 			return
 		}
-		reply("未知命令，发送 /help 查看指令。")
+		if !e.pluginCommand(ctx, event, route, network, args) {
+			reply("未知命令，发送 /help 查看指令。")
+		}
 	}
 }
 

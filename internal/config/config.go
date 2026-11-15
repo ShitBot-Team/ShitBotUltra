@@ -28,6 +28,19 @@ type Config struct {
 	Routes                 []Route      `yaml:"routes" json:"routes"`
 	Commands               []Command    `yaml:"commands" json:"commands"`
 	InventoryRetentionDays int          `yaml:"inventory_retention_days" json:"inventory_retention_days"`
+	Rendering              Rendering    `yaml:"rendering" json:"rendering"`
+}
+
+type Rendering struct {
+	BrowserPath         string `yaml:"browser_path" json:"browser_path"`
+	BrowserVersion      string `yaml:"browser_version" json:"browser_version"`
+	Concurrency         int    `yaml:"concurrency" json:"concurrency"`
+	QueueSize           int    `yaml:"queue_size" json:"queue_size"`
+	TimeoutSeconds      int    `yaml:"timeout_seconds" json:"timeout_seconds"`
+	OnlineTemplate      string `yaml:"online_template" json:"online_template"`
+	ProfileTemplate     string `yaml:"profile_template" json:"profile_template"`
+	InventoryTemplate   string `yaml:"inventory_template" json:"inventory_template"`
+	PerformanceTemplate string `yaml:"performance_template" json:"performance_template"`
 }
 
 type HTTP struct {
@@ -100,6 +113,7 @@ func Defaults() Config {
 		Binding: Binding{Enabled: true, CodeTTLSeconds: 300, MaxAttempts: 5,
 			AttemptWindowSeconds: 600, MaxPlayersPerIdentity: 3, KickOnUnbind: true},
 		InventoryRetentionDays: 30,
+		Rendering:              Rendering{Concurrency: 2, QueueSize: 8, TimeoutSeconds: 30, OnlineTemplate: "baizhou.online", ProfileTemplate: "baizhou.profile", InventoryTemplate: "ultra.inventory", PerformanceTemplate: "baizhou.performance"},
 		Connections:            []Connection{}, Nodes: []Node{}, Routes: []Route{}, Commands: []Command{},
 	}
 }
@@ -175,6 +189,17 @@ func (c Config) Validate() error {
 	}
 	if c.InventoryRetentionDays < 1 || c.InventoryRetentionDays > 3650 {
 		return errors.New("inventory retention must be between 1 and 3650 days")
+	}
+	if c.Rendering.Concurrency < 1 || c.Rendering.Concurrency > 4 || c.Rendering.QueueSize < 1 || c.Rendering.QueueSize > 64 || c.Rendering.TimeoutSeconds < 1 || c.Rendering.TimeoutSeconds > 120 {
+		return errors.New("rendering limits are out of range")
+	}
+	if (c.Rendering.BrowserPath == "") != (c.Rendering.BrowserVersion == "") {
+		return errors.New("rendering browser_path and exact browser_version must be configured together")
+	}
+	for _, id := range []string{c.Rendering.OnlineTemplate, c.Rendering.ProfileTemplate, c.Rendering.InventoryTemplate, c.Rendering.PerformanceTemplate} {
+		if !localID.MatchString(id) {
+			return errors.New("invalid built-in image template ID")
+		}
 	}
 	if len(c.Nodes) > 256 || len(c.Connections) > 64 || len(c.Routes) > 1024 || len(c.Commands) > 256 {
 		return errors.New("too many configured connections, nodes, routes or commands")
@@ -300,7 +325,7 @@ func (c Config) Validate() error {
 		}
 		commandIDs[command.Name] = true
 		switch command.Name {
-		case "bind", "unbind", "bindings", "online", "help":
+		case "bind", "unbind", "bindings", "online", "help", "profile", "inventory", "tps":
 			return errors.New("command name is reserved")
 		}
 		n, exists := nodes[command.NodeID]

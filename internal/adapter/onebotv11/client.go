@@ -2,6 +2,7 @@ package onebotv11
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"math/rand/v2"
@@ -292,6 +293,13 @@ func (c *Client) Send(ctx context.Context, target adapter.Conversation, message 
 			size += len(seg.Text)
 			data["text"] = seg.Text
 		case "image":
+			if len(seg.Data) > 0 {
+				if len(seg.Data) > 16<<20 {
+					return adapter.Receipt{}, errors.New("image data too large")
+				}
+				data["file"] = "base64://" + base64.StdEncoding.EncodeToString(seg.Data)
+				break
+			}
 			u, err := url.Parse(seg.URL)
 			if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil {
 				return adapter.Receipt{}, errors.New("invalid media URL")

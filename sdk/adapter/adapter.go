@@ -61,11 +61,13 @@ func (c Conversation) Validate() error {
 func (c Conversation) Key() string { return c.Kind + "\x1f" + c.Identity.Key() }
 
 type Segment struct {
-	Type      string    `json:"type"`
-	Text      string    `json:"text,omitempty"`
-	URL       string    `json:"url,omitempty"`
-	Target    *Identity `json:"target,omitempty"`
-	MessageID string    `json:"message_id,omitempty"`
+	Type       string    `json:"type"`
+	Text       string    `json:"text,omitempty"`
+	URL        string    `json:"url,omitempty"`
+	Target     *Identity `json:"target,omitempty"`
+	MessageID  string    `json:"message_id,omitempty"`
+	ResourceID string    `json:"resource_id,omitempty"`
+	Data       []byte    `json:"-"`
 }
 
 type Message struct {
