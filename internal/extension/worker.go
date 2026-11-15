@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -134,6 +135,7 @@ func (w *worker) run() {
 	}()
 	vm := goja.New()
 	vm.SetMaxCallStackSize(256)
+	promiseType := reflect.TypeOf((*goja.Promise)(nil))
 	var callContext context.Context = w.ctx
 	jsonObject := vm.Get("JSON").ToObject(vm)
 	parse, _ := goja.AssertFunction(jsonObject.Get("parse"))
@@ -221,7 +223,9 @@ func (w *worker) run() {
 		}
 		// Promise-based modules must bundle a synchronous export; do not report
 		// an unresolved asynchronous result as successful completion.
-		if _, promise := value.Export().(*goja.Promise); promise {
+		// Checking the type must not export an object: Export walks properties
+		// and would invoke getters a second time before JSON.stringify.
+		if value.ExportType() == promiseType {
 			return nil, fault.New("PLUGIN_FAILED", "插件回调必须返回同步 JSON 结果")
 		}
 		data, err := serialize(value)

@@ -264,7 +264,9 @@ func (h *Handler) createSecret(w http.ResponseWriter, r *http.Request) {
 		writeError(w, fault.New("INVALID_INPUT", "凭据文件名无效"))
 		return
 	}
-	value := body.Value
+	// Match the normalization used when the credential is read on startup, so
+	// the value shown to the administrator is the value the runtime will use.
+	value := strings.TrimSpace(body.Value)
 	if value == "" {
 		value = securefs.ID() + securefs.ID()
 	}
