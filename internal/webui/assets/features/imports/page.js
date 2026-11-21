@@ -175,6 +175,6 @@ export default definePage(context => {
     view,
     load: loadSources,
     render: importsPanel,
-    dirty: () => s.sources.some(item => item.selected) && !s.report?.committed_at
+    dirty: () => s.sources.some(item => item.selected) && (!s.report?.committed_at || s.reportFingerprint !== JSON.stringify(importRequest()))
   };
 });

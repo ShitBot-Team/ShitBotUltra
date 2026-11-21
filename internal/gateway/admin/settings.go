@@ -21,7 +21,30 @@ func (h *Handler) settingsDocument(doc config.Document) (settingsDocument, error
 	if err != nil {
 		return settingsDocument{}, fault.New("INVALID_CONFIG", err.Error())
 	}
-	return settingsDocument{Revision: doc.Revision, Config: cfg, RestartRequired: !reflect.DeepEqual(cfg, h.engine.Config)}, nil
+	cfg = normalizedSettings(cfg)
+	return settingsDocument{Revision: doc.Revision, Config: cfg, RestartRequired: !reflect.DeepEqual(cfg, normalizedSettings(h.engine.Config))}, nil
+}
+
+// JSON forms represent empty collections as []; YAML may load them as nil.
+// Normalize copies, including nested slices, so a round trip does not invent a
+// restart requirement or mutate the immutable running configuration.
+func normalizedSettings(cfg config.Config) config.Config {
+	cfg.HTTP.AllowedHosts = append([]string{}, cfg.HTTP.AllowedHosts...)
+	cfg.Connections = append([]config.Connection{}, cfg.Connections...)
+	cfg.Nodes = append([]config.Node{}, cfg.Nodes...)
+	for i := range cfg.Nodes {
+		cfg.Nodes[i].Actions = append([]string{}, cfg.Nodes[i].Actions...)
+	}
+	cfg.Routes = append([]config.Route{}, cfg.Routes...)
+	for i := range cfg.Routes {
+		cfg.Routes[i].NodeIDs = append([]string{}, cfg.Routes[i].NodeIDs...)
+	}
+	cfg.Commands = append([]config.Command{}, cfg.Commands...)
+	for i := range cfg.Commands {
+		cfg.Commands[i].Arguments = append([]string{}, cfg.Commands[i].Arguments...)
+		cfg.Commands[i].Roles = append([]string{}, cfg.Commands[i].Roles...)
+	}
+	return cfg
 }
 
 func (h *Handler) registerSettings() {

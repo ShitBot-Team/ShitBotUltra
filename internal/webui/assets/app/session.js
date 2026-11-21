@@ -16,6 +16,7 @@ function initial() {
     events: [],
     streamState: '未连接',
     restartRequired: false,
+    configurationError: '',
     previewData: null
   };
 }
@@ -35,7 +36,9 @@ export function createSession() {
       api.webui(),
       api.rendering(),
       api.updates(),
-      request('/api/v1/config/sections')
+      // A manually edited invalid YAML file must not lock the administrator out
+      // of the source editor while the Core is still running its valid snapshot.
+      request('/api/v1/config/sections').then(value => ({ value }), error => ({ error }))
     ]);
     if (epoch !== sessionGeneration()) return;
     Object.assign(state, {
@@ -45,7 +48,8 @@ export function createSession() {
       webui,
       rendering,
       updates,
-      restartRequired: settings.restart_required
+      restartRequired: settings.value ? settings.value.restart_required : state.restartRequired,
+      configurationError: settings.error ? '无法读取配置表单，请在“配置与凭据”检查原文：' + settings.error.message : ''
     });
     if (!state.networks.some(item => item.id === state.network)) state.network = state.networks[0]?.id || '';
   }
@@ -75,10 +79,16 @@ export function createSession() {
         if (event.type === 'connections') state.connections = event.data;
         if (event.type === 'update.changed') state.updates = event.data;
         if (event.type === 'webui.changed') state.webui = event.data;
-        if (event.type === 'config.saved') state.restartRequired = !!event.data.restart_required;
-        if (event.type === 'reset') refresh().catch(() => {
-          state.streamState = '状态刷新失败，请手动刷新';
-        });
+        if (event.type === 'config.saved') {
+          state.restartRequired = !!event.data.restart_required;
+          state.configurationError = '';
+        }
+        if (event.type === 'reset') {
+          const epoch = sessionGeneration();
+          refresh().catch(() => {
+            if (epoch === sessionGeneration()) state.streamState = '状态刷新失败，请手动刷新';
+          });
+        }
       },
       value => {
         state.streamState = value;

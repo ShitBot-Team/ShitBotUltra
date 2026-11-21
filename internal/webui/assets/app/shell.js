@@ -230,6 +230,7 @@ export default {
                   ]
                 ),
                 ctx.state.restartRequired ? h('p', { class: 'notice warning' }, '配置已保存，等待宿主重启后生效。连接状态与业务操作仍使用当前运行配置。') : null,
+                ctx.state.configurationError ? h('p', { class: 'notice error', role: 'alert' }, ctx.state.configurationError) : null,
                 state.error ? h('p', { class: 'notice error', role: 'alert' }, state.error) : null,
                 state.loading ? h('p', { class: 'loading', role: 'status' }, '正在加载页面…') : null,
                 page.value ? h('div', { inert: state.loading || undefined }, [h(page.value, { context: ctx, key: state.route.id })]) : null,
