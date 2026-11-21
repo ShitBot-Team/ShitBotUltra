@@ -64,3 +64,15 @@ export interface Dashboard {
   nodes: number; connected_nodes: number; adapters: number; enabled_adapters: number; connected_adapters: number;
   routes: number; commands: number;
 }
+
+export interface TaskSnapshot {
+  revision: string; paused: boolean; reason: string;
+  items: { config: TaskConfig; next_at?: string; running: boolean }[];
+}
+export interface TaskRun {
+  id: string; task_id: string; task_name: string; revision: string;
+  action_kind: TaskAction['kind']; target_id: string; trigger: 'scheduled' | 'manual';
+  scheduled_at: string; created_at: string; started_at?: string; finished_at?: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'unknown' | 'skipped' | 'canceled';
+  error_code: string; message: string;
+}

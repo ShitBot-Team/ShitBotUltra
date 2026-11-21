@@ -58,6 +58,7 @@ func New(engine *bootstrap.Engine, status func() any, listenAddress string) *Han
 	h.registerUpdates()
 	h.registerWebUI()
 	h.registerSettings()
+	h.registerTasks()
 	return h
 }
 

@@ -29,6 +29,7 @@ import (
 	"github.com/ShitBot-Team/ShitBotUltra/internal/rendering"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/storage"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/storage/sqlite"
+	"github.com/ShitBot-Team/ShitBotUltra/internal/task"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/updating"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/webui"
 	"github.com/ShitBot-Team/ShitBotUltra/sdk/adapter"
@@ -47,6 +48,7 @@ type Engine struct {
 	Updates     *updating.Service
 	WebUI       *webui.Service
 	Imports     *shitbot.Service
+	Tasks       *task.Service
 	Events      *events.Bus
 	Hub         *minecraft.Hub
 	Adapters    map[string]adapter.Adapter
@@ -141,12 +143,19 @@ func New(ctx context.Context, dir string, cfg config.Config, cs *config.Store, d
 	for i := range e.queues {
 		e.queues[i] = make(chan adapter.Event, 64)
 	}
+	e.Tasks, err = task.New(ctx, db, cfg, e.executeTask, e.Events.Publish, logger)
+	if err != nil {
+		return nil, err
+	}
 	success = true
 	return e, nil
 }
 
 func (e *Engine) Start() error {
 	if err := e.Players.Recover(e.ctx); err != nil {
+		return err
+	}
+	if err := e.Tasks.Start(); err != nil {
 		return err
 	}
 	e.Plugins.Start()
@@ -221,6 +230,9 @@ func (e *Engine) Start() error {
 func (e *Engine) Close() {
 	e.closeOnce.Do(func() {
 		e.cancel()
+		if e.Tasks != nil {
+			e.Tasks.Close()
+		}
 		if e.Hub != nil {
 			e.Hub.Close()
 		}

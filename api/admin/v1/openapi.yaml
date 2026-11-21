@@ -10,6 +10,102 @@ servers:
 security:
 - bearerAuth: []
 paths:
+  /tasks:
+    get:
+      operationId: listActiveTasks
+      description: Immutable running configuration, scheduler status and next times. Persisted edits do not affect this snapshot until restart. revision is a running configuration digest, not the source editor ETag.
+      responses:
+        '200':
+          description: Active task snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskSnapshot'
+        default:
+          $ref: '#/components/responses/Error'
+  /tasks/{id}/run:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    post:
+      operationId: runTaskOnce
+      description: Explicitly enqueue one enabled, running task without moving its schedule. Requires the snapshot revision. At most one queued/running action per task and one new manual submission per task per 10 seconds. Reusing request_id returns its retained record; it never retries an accepted action. A new ID must be timestamped within the last 5 minutes (30 seconds future skew allowed). Old IDs absent after retention are rejected. Acceptance survives HTTP cancellation; query the ID after transport failure.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [request_id, revision]
+              properties:
+                request_id:
+                  type: string
+                  pattern: '^[0-9]{13}-[a-f0-9]{32}$'
+                  description: Unix milliseconds, hyphen, then 16 cryptographically random bytes as lowercase hex. This is also the run ID.
+                revision:
+                  type: string
+                  pattern: '^[a-f0-9]{64}$'
+      responses:
+        '202':
+          description: Queued or running, including a previously accepted request
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskRun'
+        '200':
+          description: Previously accepted run already finished; no additional action
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskRun'
+        default:
+          $ref: '#/components/responses/Error'
+  /task-runs:
+    get:
+      operationId: listTaskRuns
+      description: Newest records first; includes removed tasks. Retention is 30 days or the latest 10000 records, while active records and the latest 10 minutes are protected from count pruning. No message/command bodies or remote error text are stored. Pagination uses offset; concurrent new runs can shift pages.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      - name: task_id
+        in: query
+        schema:
+          type: string
+          maxLength: 64
+      responses:
+        '200':
+          description: Retained execution records
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaskRun'
+        default:
+          $ref: '#/components/responses/Error'
+  /task-runs/{id}:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    get:
+      operationId: getTaskRun
+      description: Look up a known run/request ID without sending any action. A 404 does not by itself prove a concurrent POST was never accepted.
+      responses:
+        '200':
+          description: Execution record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskRun'
+        default:
+          $ref: '#/components/responses/Error'
   /dashboard:
     get:
       operationId: getDashboard
@@ -2297,6 +2393,66 @@ components:
         performance_template:
           type: string
           pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+    TaskSnapshot:
+      type: object
+      required: [revision, paused, reason, items]
+      properties:
+        revision:
+          type: string
+        paused:
+          type: boolean
+        reason:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            required: [config, running]
+            properties:
+              config:
+                $ref: '#/components/schemas/TaskConfig'
+              next_at:
+                type: string
+                format: date-time
+              running:
+                type: boolean
+                description: Includes queued work.
+    TaskRun:
+      type: object
+      required: [id, task_id, task_name, revision, action_kind, target_id, trigger, scheduled_at, created_at, status, error_code, message]
+      properties:
+        id:
+          type: string
+        task_id:
+          type: string
+        task_name:
+          type: string
+        revision:
+          type: string
+        action_kind:
+          enum: [bot.message, chat.send, command.execute]
+        target_id:
+          type: string
+        trigger:
+          enum: [scheduled, manual]
+        scheduled_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+        status:
+          enum: [queued, running, succeeded, failed, unknown, skipped, canceled]
+        error_code:
+          type: string
+        message:
+          type: string
     TaskSchedule:
       type: object
       additionalProperties: false
