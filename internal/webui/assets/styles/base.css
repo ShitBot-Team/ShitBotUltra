@@ -1,0 +1,29 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+button, input, select, textarea { font: inherit; }
+a { color: var(--accent); text-underline-offset: 3px; }
+button, a, input, select, textarea, summary { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+button { color: var(--text); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 8px; padding: 8px 15px; cursor: pointer; font-weight: 600; transition: background .15s, border-color .15s; }
+button:hover:not(:disabled) { border-color: var(--border-hover); background: var(--accent-soft); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+button.danger { color: var(--danger); background: var(--danger-bg); border-color: var(--danger-border); }
+input, select, textarea { width: 100%; min-width: 0; border: 1px solid var(--border); background: var(--input); color: var(--text); padding: 10px 12px; border-radius: 8px; }
+input::placeholder, textarea::placeholder { color: var(--quiet); }
+input[readonly] { color: var(--muted); background: var(--surface-raised); }
+textarea { font-family: 'Cascadia Code', Consolas, monospace; font-size: 13px; line-height: 1.7; resize: vertical; tab-size: 2; }
+input[type='checkbox'] { accent-color: var(--accent); }
+h1, h2, h3, p { margin-top: 0; }
+h1 { font-size: 28px; letter-spacing: -.8px; line-height: 1.35; margin-bottom: 7px; }
+h2 { font-size: 16px; letter-spacing: -.2px; margin-bottom: 0; }
+h3 { font-size: 15px; }
+p { margin-bottom: 12px; }
+small { color: var(--muted); }
+fieldset.page-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.page-heading h1:focus, main:focus { outline: none; }
+svg { flex-shrink: 0; }
+.muted { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.eyebrow { display: block; font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
