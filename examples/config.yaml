@@ -49,6 +49,8 @@ routes:
     bot_prefix: '[游戏] '
     game_prefix: '[群聊] '
 commands: []
+# 定时任务默认关闭；配置与时点说明见 docs/tasks.md。
+tasks: []
 rendering:
   # 路径及精确浏览器 product/version 必须一起填写；留空时使用文本回复。
   browser_path: ''

@@ -27,6 +27,7 @@ type Config struct {
 	Nodes                  []Node       `yaml:"nodes" json:"nodes"`
 	Routes                 []Route      `yaml:"routes" json:"routes"`
 	Commands               []Command    `yaml:"commands" json:"commands"`
+	Tasks                  []Task       `yaml:"tasks" json:"tasks"`
 	InventoryRetentionDays int          `yaml:"inventory_retention_days" json:"inventory_retention_days"`
 	Rendering              Rendering    `yaml:"rendering" json:"rendering"`
 	WebUI                  bool         `yaml:"webui" json:"webui"`
@@ -116,7 +117,7 @@ func Defaults() Config {
 			AttemptWindowSeconds: 600, MaxPlayersPerIdentity: 3, KickOnUnbind: true},
 		InventoryRetentionDays: 30,
 		Rendering:              Rendering{Concurrency: 2, QueueSize: 8, TimeoutSeconds: 30, OnlineTemplate: "baizhou.online", ProfileTemplate: "baizhou.profile", InventoryTemplate: "ultra.inventory", PerformanceTemplate: "baizhou.performance"},
-		Connections:            []Connection{}, Nodes: []Node{}, Routes: []Route{}, Commands: []Command{},
+		Connections:            []Connection{}, Nodes: []Node{}, Routes: []Route{}, Commands: []Command{}, Tasks: []Task{},
 	}
 }
 
@@ -369,7 +370,7 @@ func (c Config) Validate() error {
 			}
 		}
 	}
-	return nil
+	return c.validateTasks()
 }
 
 func (c Config) Node(id string) (Node, bool) {

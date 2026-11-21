@@ -28,6 +28,9 @@ export interface CommandConfig {
   name: string; node_id: string; template: string; arguments: string[]; roles: string[];
   require_binding: boolean; cooldown_seconds: number;
 }
+export interface TaskSchedule { kind: 'interval' | 'daily'; every_seconds?: number; at?: string; timezone?: string }
+export interface TaskAction { kind: 'bot.message' | 'chat.send' | 'command.execute'; route_id?: string; node_id?: string; text: string }
+export interface TaskConfig { id: string; name: string; enabled: boolean; schedule: TaskSchedule; action: TaskAction }
 export interface BindingConfig {
   enabled: boolean; code_ttl_seconds: number; max_attempts: number;
   attempt_window_seconds: number; max_players_per_identity: number; kick_on_unbind: boolean;
@@ -39,7 +42,7 @@ export interface RenderingConfig {
 export interface ConfigurationSections {
   connections: BotConnectionConfig[] | null; nodes: GameNodeConfig[] | null;
   routes: MessageRouteConfig[] | null; commands: CommandConfig[] | null;
-  binding: BindingConfig; rendering: RenderingConfig;
+  tasks: TaskConfig[]; binding: BindingConfig; rendering: RenderingConfig;
 }
 export interface Configuration extends ConfigurationSections {
   config_version: 1; webui: boolean; inventory_retention_days: number;
@@ -48,7 +51,7 @@ export interface Configuration extends ConfigurationSections {
 export interface SettingsDocument { revision: string; config: Configuration; restart_required: boolean }
 export interface ConfigSectionPatch {
   connections?: BotConnectionConfig[]; nodes?: GameNodeConfig[]; routes?: MessageRouteConfig[]; commands?: CommandConfig[];
-  binding?: Partial<BindingConfig>; rendering?: Partial<RenderingConfig>;
+  tasks?: TaskConfig[]; binding?: Partial<BindingConfig>; rendering?: Partial<RenderingConfig>;
 }
 export interface NodeConnection {
   id: string; network_id: string; server_id: string; connected: boolean; boot_id?: string; platform?: string;

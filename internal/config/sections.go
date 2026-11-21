@@ -36,6 +36,7 @@ func SectionText(text string, sections map[string]json.RawMessage) (string, erro
 	}{
 		{"connections", new([]Connection)}, {"nodes", new([]Node)},
 		{"routes", new([]Route)}, {"commands", new([]Command)},
+		{"tasks", new([]Task)},
 		{"binding", &cfg.Binding}, {"rendering", &cfg.Rendering},
 	}
 	known := make(map[string]bool, len(values))

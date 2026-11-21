@@ -40,6 +40,7 @@ func normalizedSettings(cfg config.Config) config.Config {
 		cfg.Routes[i].NodeIDs = append([]string{}, cfg.Routes[i].NodeIDs...)
 	}
 	cfg.Commands = append([]config.Command{}, cfg.Commands...)
+	cfg.Tasks = append([]config.Task{}, cfg.Tasks...)
 	for i := range cfg.Commands {
 		cfg.Commands[i].Arguments = append([]string{}, cfg.Commands[i].Arguments...)
 		cfg.Commands[i].Roles = append([]string{}, cfg.Commands[i].Roles...)

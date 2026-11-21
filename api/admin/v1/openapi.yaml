@@ -2297,6 +2297,60 @@ components:
         performance_template:
           type: string
           pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+    TaskSchedule:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:
+          enum: [interval, daily]
+        every_seconds:
+          type: integer
+          minimum: 60
+          maximum: 604800
+        at:
+          type: string
+          pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 128
+      description: Interval uses every_seconds only; daily uses at and an explicit IANA timezone (not Local). Intervals align to the Unix epoch. Missed times are not replayed.
+    TaskAction:
+      type: object
+      additionalProperties: false
+      required: [kind, text]
+      properties:
+        kind:
+          enum: [bot.message, chat.send, command.execute]
+        route_id:
+          type: string
+        node_id:
+          type: string
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      description: Text is at most 2000 UTF-8 bytes with no control characters. bot.message needs only route_id; other actions need only node_id with matching permission. Commands have no leading slash or outer whitespace. Text is literal, not a shell or template.
+    TaskConfig:
+      type: object
+      additionalProperties: false
+      required: [id, name, enabled, schedule, action]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: At most 128 UTF-8 bytes without control characters.
+        enabled:
+          type: boolean
+        schedule:
+          $ref: '#/components/schemas/TaskSchedule'
+        action:
+          $ref: '#/components/schemas/TaskAction'
     ConfigSectionPatch:
       type: object
       additionalProperties: false
@@ -2321,6 +2375,11 @@ components:
           items:
             $ref: '#/components/schemas/CommandConfig'
           maxItems: 256
+        tasks:
+          type: array
+          maxItems: 128
+          items:
+            $ref: '#/components/schemas/TaskConfig'
         binding:
           $ref: '#/components/schemas/BindingConfig'
         rendering:
@@ -2334,6 +2393,7 @@ components:
       - nodes
       - routes
       - commands
+      - tasks
       - binding
       - rendering
       - config_version
@@ -2369,6 +2429,11 @@ components:
           items:
             $ref: '#/components/schemas/CommandConfig'
           maxItems: 256
+        tasks:
+          type: array
+          maxItems: 128
+          items:
+            $ref: '#/components/schemas/TaskConfig'
         binding:
           $ref: '#/components/schemas/BindingConfig'
         rendering:
