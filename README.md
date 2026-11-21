@@ -21,6 +21,14 @@ ShitBotUltra 是基于 [ShitBot](https://github.com/hutuyee/ShitBot) 功能重�
 | Linux   | ![](https://img.shields.io/badge/Waiting-E6DD09) |
 | Mac     | ![](https://img.shields.io/badge/Waiting-E6DD09) |
 
+## Core 控制台
+
+内置控制台覆盖服务器、机器人适配器、消息路由、命令、玩家、绑定、导入、模板与插件管理。
+
+- [功能与使用说明](docs/webui.md)
+- [按模块扩展页面](docs/webui-development.md)
+- [当前实现与验证边界](docs/implementation-status.md)
+
 ## 参与贡献
 
 欢迎提交 PR，改进代码、修复问题或补充文档，也欢迎 AI 辅助编写的贡献

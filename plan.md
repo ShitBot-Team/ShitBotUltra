@@ -1,6 +1,6 @@
 # ShitBotUltra Core 计划
 
-更新日期：2026-11-15。状态：Core 已有源码实现并补齐管理流程，当前仅完成静态审查与补丁应用检查，未构建、测试或联调。其他四个仓库的交付状态不能从 Core 推断。[实现状态](docs/implementation-status.md)列出当前范围与后续工作，本文保留跨仓库职责及计划索引。
+更新日期：2026-11-21。状态：Core 已有源码实现并补齐管理流程，当前仅完成静态审查与补丁应用检查，未构建、测试或联调。其他四个仓库的交付状态不能从 Core 推断。[实现状态](docs/implementation-status.md)列出当前范围与后续工作，本文保留跨仓库职责及计划索引。
 
 ## 本仓库职责
 
@@ -26,6 +26,8 @@
 | [贡献指南](CONTRIBUTING.md) | Conventional Commits 与简明 PR 约定 |
 | [代理执行规范](AGENTS.md) | 五仓库共同工作约束；agent.md 仅作导航 |
 | [许可证说明](docs/licensing.md) | AGPL-3.0-only 和历史许可边界 |
+
+本轮继续完成 Core 控制台管理：新增统计与分区配置 API，将 WebUI 拆为独立功能模块并提供服务器、适配器、路由、命令、渲染等管理表单。实现细节见 [WebUI](docs/webui.md) 和 [开发说明](docs/webui-development.md)。依然未编译或运行测试。
 
 ## 接续工作顺序
 

@@ -75,3 +75,12 @@ func serve(parent context.Context, dir, version string, log *slog.Logger) error 
 `/bridge/v1` 使用节点 Token 和 `X-SBU-Node-ID`，不接受带 Origin 的浏览器连接；`/api/v1/` 全部要求管理 Token。SSE 客户端用带 Authorization 的 fetch 流；原生 EventSource 无法携带该 header。事件历史最多 512 条，出现 `reset` 后重新读取相关状态。
 
 页面关闭不会关闭 API。管理接口没有提供任意远程关机 / 启动命令；进程重启与软件安装始终由宿主负责。
+
+## 控制台管理接口补充（2026-11-21）
+
+- `GET /api/v1/dashboard`：当前活动网络的真实玩家/绑定分类及节点、适配器计数。
+- `GET /api/v1/config/sections`：读取持久化配置与共享 revision，不返回凭据原文。
+- `PATCH /api/v1/config/sections`：以 `If-Match` 提交一个或多个配置分区，复用校验、备份、文件事务；保存不热切换连接。
+- `/connections` 及 `runtime.Status.Nodes` 增加 `allowed_actions`，表示活动配置允许的动作；仍须与游戏端 `capabilities` 取交集。
+
+已有 API 路径保留。原文配置保存的 `restart_required` 现在根据文件与活动配置比较，原样保存或恢复活动配置时可返回 false。页面结构和静态审查边界见 [WebUI](webui.md)。

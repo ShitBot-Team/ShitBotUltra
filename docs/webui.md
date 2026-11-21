@@ -1,25 +1,70 @@
-# 内置管理页面
+# Core 管理控制台
 
-Core 默认在同一个 HTTP 监听地址提供管理页面与 API。首次启动后打开宿主输出的地址，输入管理 Token。默认凭据位于配置目录 `secrets/admin.token`；也可在 `http.admin_token` 中引用环境变量或其他凭据文件。
+更新日期：2026-11-21。本轮提供源码和补丁，按维护者要求只做静态审查与补丁应用核对，未运行测试、编译、启动 Core 或进行浏览器联调。
 
-Token 仅在页面内存中保存，刷新或退出后需重新输入。请求使用 Authorization Bearer header；SSE 使用 fetch 流，不将 Token 放进查询参数。页面使用本地 Vue 3 runtime 和静态资源，不依赖运行时 CDN。模板源码通过 JSON 文本编辑，预览只显示渲染后的 PNG / JPEG，不在管理页面执行用户模板。
+Core 在同一 HTTP 地址提供页面与管理 API。默认凭据位于配置目录 `secrets/admin.token`，也可通过 `http.admin_token` 指向其他凭据引用。管理 Token 仅在页面内存中保留，刷新或退出后重新登录；SSE 使用带 Authorization header 的 fetch 流，不在 URL 中传递 Token。浏览器只保存明暗主题偏好。
 
-## 已实现页面
+## 功能分组
 
-运行概览、连接状态、配置原文与校验、凭据创建、绑定与无账号白名单、玩家列表、背包快照、SQLite 单文件 / 多文件导入与冲突排除、报告下载与撤销、模板文件草稿 / 发布 / 回滚 / 默认样式 / 图片预览、插件授权与生命周期、宿主更新和事件记录。
+| 分组 | 页面与用途 |
+| --- | --- |
+| 工作台 | 运行概览、按类型/摘要筛选的事件记录、暂停显示及导出 |
+| 连接与路由 | Minecraft 服务器节点、机器人适配器、会话到节点的消息路由 |
+| 玩家与数据 | 玩家与背包快照、绑定与无账号白名单、绑定规则、旧版白名单导入 |
+| 命令与扩展 | 自定义群命令、远程节点动作、本地插件、图片模板 |
+| 核心设置 | Chromium / 渲染队列、配置原文与凭据、宿主更新、项目来源与致谢 |
 
-配置文件保存有 ETag 冲突保护，写入前备份；保存后提示待重启，不宣称连接已热切换。导入的源文件、目标范围或排除选择变化后必须重新预览，不能直接提交旧报告。游戏动作仍走 Core 的权限与能力检查。
+导航支持折叠、搜索和 `#/nodes` 等可直接打开的地址，页面按需加载。界面提供明暗主题与窄屏侧栏。界面自行实现；EasyBot 截图仅作为功能分组与信息组织参考，没有复制其 WebUI 源码、样式或素材。
 
-`webui: true/false` 是下次启动的默认值。`runtime.Options.WebUI` 可覆盖初始值；管理 API `PUT /api/v1/webui` 的 `{enabled:true/false}` 修改本次会话。关闭页面不关闭 `/api/`。页面与 API 共用 Host / Origin 限制；反向代理需要正确设置允许的 Host，远程部署按 HTTP 配置要求启用 TLS。
+概览统计来自 `GET /api/v1/dashboard`，不把列表一页的长度当作总数。已知玩家取 `player_stats` 与 `bindings` 的 `(network_id, player_name)` 并集，仅汇总当前运行配置中的网络；跨网络不去重。已绑定社交账号、无账号白名单、未加入名单的历史玩家单独计数。在线数来自权威节点会话记录，不从机器人连接数推算。玩家数据标明读取时间，刷新页面才重新取统计；连接状态继续通过 SSE 更新。没有虚构趋势图、公告或运行数据。
 
-## 源码与可选打包
+## 表单配置与运行配置
 
-`internal/webui/assets/` 是手写的、浏览器可直接执行的 Vue ES modules，随 Go module 一起嵌入。它不是本次运行编译工具生成的 dist。Vue 固定为 3.5.13，上游原始 runtime、MIT LICENSE 与 npm integrity / SHA-256 记录在 `assets/vendor/`；未修改其运行时代码。
+服务器、适配器、路由、命令、绑定规则和渲染设置共用 `config.yaml`，通过 `GET /api/v1/config/sections` 和 `PATCH /api/v1/config/sections` 读写。
 
-`web/` 提供 TypeScript 入口、公共 DTO、Vite 配置和锁定的依赖清单。它导入同一份组件与 API 客户端，没有第二套页面业务。主要浏览器模块当前以 JavaScript 编写，TypeScript 入口与 DTO 不等于所有页面已完成 TypeScript 严格类型校验。
+- 各页面拥有独立草稿，保存该分区时校验整个配置；其他页面的文件修改会触发共享 ETag 冲突，不能覆盖。
+- 数组分区整组替换，不能把空数组当作“不变”；绑定和渲染对象的省略字段保留原值。API 可一次修改多个分区，以原子方式更新节点与其引用。
+- 修改使用 YAML 语法树，保留未修改分区的值、顶层顺序及评论；整个文件的排版和被替换分区内部的评论可能改变。带锚点、别名、合并键的文件须使用配置原文编辑，防止误改关联值。
+- 保存走原配置存储的校验、备份、原子写入和锁内版本复核。保存后比较文件与运行配置，空列表的 nil / `[]` 差异不会触发误报；`restart_required` 为真时须重启宿主。
+- 表单不进行连接热切换。新增但未重启的网络不会出现在绑定/导入等业务操作的网络选择里；节点动作根据当前运行权限与游戏端能力交集开放。
+- 已有节点/连接/路由/命令的标识在表单中只读；若更名，请在原文中同时修改所有引用，或由 API 一次提交关联分区。
+- 未保存的配置、模板文件/样式、插件配置与导入选择在离页或刷新前提醒。冲突时保留本页草稿，可导出分区 JSON 后重新读取并合并。
 
-维护者如需优化打包，可自行在 `web/` 执行 `npm ci` 和 `npm run build`，输出到 `internal/webui/optimized/dist/`。这两个命令未在本次任务执行。运行环境最低为 Node.js 20.19 或 22.12（按 package.json engines）。没有优化产物时，Core 直接使用完整的 authored assets；终端用户不需要 Node.js。
+若配置文件在 Core 运行期间被手动改成无效 YAML，表单会报告错误，但仍可登录“配置与凭据”修复原文。
 
-优化产物带 authored assets 的源码摘要；Core 只在摘要匹配时选择优化版本，防止修改页面后继续携带旧页面。发布需要优化版本的 Go module tag 时，应把经过维护者验证的整个 dist 纳入发行源码；单纯留在本地未跟踪目录不会随 Go module 分发。没有纳入时仍携带同版本原始页面。
+远程动作不自动重试。游戏端返回 `RESULT_UNKNOWN` 或传输中断时，先确认游戏端执行结果，再决定是否重发。`permission.check` 和 `placeholder.resolve` 的参数由对应平台约定，因此保留 JSON 参数入口。读取背包快照与向节点请求实时采集是两个操作。
 
-本次只检查源文件语法、依赖清单与接口对应关系，未编译前端、未启动 Core、未进行浏览器或功能验证。
+`webui: true/false` 控制下次启动默认值；宿主可用 `runtime.Options.WebUI` 覆盖初始值。`PUT /api/v1/webui` 只修改本次会话。关闭页面服务不会关闭管理 API，但未加载的页面模块与刷新页面将无法加载，需要通过 API 或宿主恢复。
+
+## 源码职责
+
+页面源码位于 `internal/webui/assets/`，都是浏览器可直接执行的本地 Vue ES modules：
+
+| 位置 | 职责 |
+| --- | --- |
+| `app.js`、`bootstrap.js` | 挂载入口，不含页面业务 |
+| `app/routes.js` | 分组、导航元数据与懒加载页面注册 |
+| `app/session.js` | 登录会话、共享网络/连接摘要、事件流与退出清理 |
+| `app/shell.js`、`app/login.js` | 导航、页头、主题、移动端与登录布局 |
+| `api/client.js`、`api/events.js` | 鉴权、超时、取消、错误码、SSE 重连与空闲超时 |
+| `features/<功能>/page.js` | 该功能自己的页面、状态与交互 |
+| `features/<功能>/api.js` | 该功能的请求路径与 DTO 组合；配置表单共用 `features/config/api.js` |
+| `components/` | 表单、表格、分页、上传和集合编辑等共享组件 |
+| `composables/page.js` | 页面请求生命周期、错误状态、忙碌状态和离页钩子 |
+| `composables/settings.js` | 分区草稿、版本冲突、保存和草稿导出 |
+| `shared/` | Vue 单一入口、格式化与安全链接等纯辅助函数 |
+| `styles/` | 设计变量、基础元素、应用布局、公共组件、概览页面样式 |
+
+页面卸载取消属于该页的请求，退出使所有会话请求失效并终止事件流；旧请求不能把数据带入下一个登录会话。页面状态不放在一个全局大对象里，也没有为每页复制 HTTP 客户端。`previewData` 仅用于插件数据转交模板预览，读取后清除。
+
+新增功能的步骤及约束见 [WebUI 开发说明](webui-development.md)。业务规则与授权仍在 Core，前端不操作数据库。
+
+## 嵌入与可选优化打包
+
+未提供优化产物时，Go 直接嵌入并提供整个 `assets` 树，最终用户不需要 Node.js。Vue 固定为 3.5.13，runtime 与其 MIT LICENSE、来源校验记录仍在 `assets/vendor/`，本轮未修改。
+
+`web/` 的 TypeScript / Vite 入口使用同一套页面，不维护第二份 UI。`web/src/contracts.ts` 提供 DTO；页面仍为 JavaScript，不能将其称作 TypeScript 全量严格检查通过。维护者可自行执行 `npm ci` 与 `npm run build`，输出到 `internal/webui/optimized/dist/`。这些命令本轮没有执行。
+
+Vite 依旧写入 authored assets 的源码摘要；Core 只有在摘要相符时选用优化产物。旧 dist 在源文件改变后自动失配并回退到当前模块。若发行包含优化版，必须将该版本全部 dist 文件随 Core module 发布。
+
+本轮没有浏览器视觉验收、实际网络请求、游戏联调或构建结果，需由维护者在自己的环境完成。
