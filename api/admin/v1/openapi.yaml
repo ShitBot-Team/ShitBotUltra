@@ -10,6 +10,66 @@ servers:
 security:
 - bearerAuth: []
 paths:
+  /dashboard:
+    get:
+      operationId: getDashboard
+      description: Counts distinct network/player-name records in active configured networks. Includes whitelist entries before first login; does not merge players across networks. Counts are a database snapshot, connections are sampled separately.
+      responses:
+        '200':
+          description: Network statistics and connection counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        default:
+          $ref: '#/components/responses/Error'
+  /config/sections:
+    get:
+      operationId: getConfigurationSections
+      description: Persisted configuration with secret references, never resolved secret values. The revision is shared with the YAML editor. restart_required compares persisted and running configuration.
+      responses:
+        '200':
+          description: Configuration for form editors
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsDocument'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: patchConfigurationSections
+      description: Atomically update one or more supported sections. Arrays replace the whole section; binding/rendering objects retain omitted fields. Other top-level values and their comments are retained, but YAML formatting and comments inside a replaced section may change. Anchors, aliases and merge keys require the YAML editor. Validates the entire resulting configuration, backs up and checks If-Match under the store lock. Never hot-reloads connections.
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigSectionPatch'
+      responses:
+        '200':
+          description: Saved configuration and current restart requirement
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsDocument'
+        '400':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '428':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
   /status:
     get:
       operationId: getStatus
@@ -27,7 +87,11 @@ paths:
       operationId: getConnections
       responses:
         '200':
-          $ref: '#/components/responses/Object'
+          description: Current running nodes and enabled adapters; allowed_actions is the active configuration, capabilities is the game node declaration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionSnapshot'
         default:
           $ref: '#/components/responses/Error'
   /events:
@@ -89,7 +153,7 @@ paths:
                   document:
                     $ref: '#/components/schemas/Document'
                   restart_required:
-                    const: true
+                    type: boolean
         '428':
           $ref: '#/components/responses/Error'
         default:
@@ -1136,11 +1200,11 @@ components:
         nodes:
           type: array
           items:
-            type: object
+            $ref: '#/components/schemas/NodeConnection'
         adapters:
           type: array
           items:
-            type: object
+            $ref: '#/components/schemas/AdapterConnection'
         last_error:
           type: string
         webui_enabled:
@@ -1856,3 +1920,498 @@ components:
           type: string
           format: date-time
         data: {}
+
+    PlayerCounts:
+      type: object
+      additionalProperties: false
+      required:
+      - players
+      - online
+      - bound
+      - whitelist_only
+      - unlisted
+      properties:
+        players:
+          type: integer
+          minimum: 0
+        online:
+          type: integer
+          minimum: 0
+        bound:
+          type: integer
+          minimum: 0
+        whitelist_only:
+          type: integer
+          minimum: 0
+        unlisted:
+          type: integer
+          minimum: 0
+      description: players = bound + whitelist_only + unlisted. Online counts active authoritative sessions. Records
+        are distinct by network and player name.
+    NetworkSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - identity_mode
+      - nodes
+      - connected
+      - counts
+      properties:
+        id:
+          type: string
+        identity_mode:
+          enum:
+          - online
+          - forwarded
+          - offline
+        nodes:
+          type: integer
+          minimum: 0
+        connected:
+          type: integer
+          minimum: 0
+        counts:
+          $ref: '#/components/schemas/PlayerCounts'
+    Dashboard:
+      type: object
+      additionalProperties: false
+      required:
+      - generated_at
+      - counts
+      - networks
+      - nodes
+      - connected_nodes
+      - adapters
+      - enabled_adapters
+      - connected_adapters
+      - routes
+      - commands
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        counts:
+          $ref: '#/components/schemas/PlayerCounts'
+        networks:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkSummary'
+        nodes:
+          type: integer
+          minimum: 0
+        connected_nodes:
+          type: integer
+          minimum: 0
+        adapters:
+          type: integer
+          minimum: 0
+        enabled_adapters:
+          type: integer
+          minimum: 0
+        connected_adapters:
+          type: integer
+          minimum: 0
+        routes:
+          type: integer
+          minimum: 0
+        commands:
+          type: integer
+          minimum: 0
+    NodeConnection:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - network_id
+      - server_id
+      - connected
+      - capabilities
+      - allowed_actions
+      properties:
+        id:
+          type: string
+        network_id:
+          type: string
+        server_id:
+          type: string
+        connected:
+          type: boolean
+        boot_id:
+          type: string
+        platform:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        allowed_actions:
+          type: array
+          items:
+            type: string
+            enum:
+            - chat.send
+            - player.kick
+            - command.execute
+            - inventory.read
+            - tps.read
+            - permission.check
+            - placeholder.resolve
+        since:
+          type: string
+          format: date-time
+    AdapterConnection:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - type
+      - state
+      - capabilities
+      - since
+      - dropped
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        state:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        since:
+          type: string
+          format: date-time
+        last_error:
+          type: string
+        dropped:
+          type: integer
+          minimum: 0
+    ConnectionSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - nodes
+      - adapters
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeConnection'
+        adapters:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdapterConnection'
+    BotConnectionConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        type:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        enabled:
+          type: boolean
+        endpoint:
+          type: string
+        token:
+          type: string
+          description: Only file:NAME or env:NAME references; never secret values.
+        account_id:
+          type: string
+        allow_insecure_remote:
+          type: boolean
+    GameNodeConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        network_id:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        server_id:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        token:
+          type: string
+          description: Only file:NAME or env:NAME references; never secret values.
+        identity_mode:
+          enum:
+          - online
+          - forwarded
+          - offline
+        session_authority:
+          type: boolean
+        login_gate:
+          type: boolean
+        actions:
+          type: array
+          items:
+            type: string
+            enum:
+            - chat.send
+            - player.kick
+            - command.execute
+            - inventory.read
+            - tps.read
+            - permission.check
+            - placeholder.resolve
+    ConversationConfig:
+      type: object
+      additionalProperties: false
+      required:
+      - platform
+      - scope
+      - id
+      - kind
+      properties:
+        platform:
+          type: string
+        scope:
+          type: string
+        id:
+          type: string
+        kind:
+          enum:
+          - private
+          - group
+          - channel
+          - thread
+    MessageRouteConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        connection_id:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        conversation:
+          $ref: '#/components/schemas/ConversationConfig'
+        node_ids:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        to_game:
+          type: boolean
+        to_bot:
+          type: boolean
+        commands:
+          type: boolean
+        notifications:
+          type: boolean
+        unbind_on_leave:
+          type: boolean
+        bot_prefix:
+          type: string
+        game_prefix:
+          type: string
+    CommandConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        node_id:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        template:
+          type: string
+        arguments:
+          type: array
+          items:
+            type: string
+          maxItems: 16
+        roles:
+          type: array
+          items:
+            type: string
+        require_binding:
+          type: boolean
+        cooldown_seconds:
+          type: integer
+          minimum: 1
+          maximum: 86400
+    BindingConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+        code_ttl_seconds:
+          type: integer
+          minimum: 30
+          maximum: 3600
+        max_attempts:
+          type: integer
+          minimum: 1
+          maximum: 100
+        attempt_window_seconds:
+          type: integer
+          minimum: 30
+          maximum: 86400
+        max_players_per_identity:
+          type: integer
+          minimum: 1
+          maximum: 100
+        kick_on_unbind:
+          type: boolean
+    RenderingConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        browser_path:
+          type: string
+        browser_version:
+          type: string
+        concurrency:
+          type: integer
+          minimum: 1
+          maximum: 4
+        queue_size:
+          type: integer
+          minimum: 1
+          maximum: 64
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 120
+        online_template:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        profile_template:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        inventory_template:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        performance_template:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+    ConfigSectionPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/BotConnectionConfig'
+          maxItems: 64
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/GameNodeConfig'
+          maxItems: 256
+        routes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageRouteConfig'
+          maxItems: 1024
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommandConfig'
+          maxItems: 256
+        binding:
+          $ref: '#/components/schemas/BindingConfig'
+        rendering:
+          $ref: '#/components/schemas/RenderingConfig'
+      minProperties: 1
+    Configuration:
+      type: object
+      additionalProperties: false
+      required:
+      - connections
+      - nodes
+      - routes
+      - commands
+      - binding
+      - rendering
+      - config_version
+      - webui
+      - inventory_retention_days
+      - http
+      properties:
+        connections:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/BotConnectionConfig'
+          maxItems: 64
+        nodes:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/GameNodeConfig'
+          maxItems: 256
+        routes:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/MessageRouteConfig'
+          maxItems: 1024
+        commands:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/CommandConfig'
+          maxItems: 256
+        binding:
+          $ref: '#/components/schemas/BindingConfig'
+        rendering:
+          $ref: '#/components/schemas/RenderingConfig'
+        config_version:
+          const: 1
+        webui:
+          type: boolean
+        inventory_retention_days:
+          type: integer
+          minimum: 1
+          maximum: 3650
+        http:
+          type: object
+          additionalProperties: false
+          properties:
+            listen:
+              type: string
+            admin_token:
+              type: string
+              description: Only file:NAME or env:NAME references; never secret values.
+            allowed_hosts:
+              type: array
+              items:
+                type: string
+            tls_cert:
+              type: string
+            tls_key:
+              type: string
+            allow_insecure_remote:
+              type: boolean
+    SettingsDocument:
+      type: object
+      additionalProperties: false
+      required:
+      - revision
+      - config
+      - restart_required
+      properties:
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        config:
+          $ref: '#/components/schemas/Configuration'
+        restart_required:
+          type: boolean

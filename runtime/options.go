@@ -31,14 +31,15 @@ type Options struct {
 }
 
 type NodeStatus struct {
-	ID           string    `json:"id"`
-	NetworkID    string    `json:"network_id"`
-	ServerID     string    `json:"server_id"`
-	Connected    bool      `json:"connected"`
-	BootID       string    `json:"boot_id,omitempty"`
-	Platform     string    `json:"platform,omitempty"`
-	Capabilities []string  `json:"capabilities"`
-	Since        time.Time `json:"since,omitempty"`
+	ID             string    `json:"id"`
+	NetworkID      string    `json:"network_id"`
+	ServerID       string    `json:"server_id"`
+	Connected      bool      `json:"connected"`
+	BootID         string    `json:"boot_id,omitempty"`
+	Platform       string    `json:"platform,omitempty"`
+	Capabilities   []string  `json:"capabilities"`
+	AllowedActions []string  `json:"allowed_actions"`
+	Since          time.Time `json:"since,omitempty"`
 }
 
 type Status struct {

@@ -271,7 +271,7 @@ func (r *Runtime) Status() Status {
 		status.WebUIEnabled = engine.WebUI.Status().Enabled
 		status.Adapters = engine.AdapterStatus()
 		for _, node := range engine.Hub.Status() {
-			status.Nodes = append(status.Nodes, NodeStatus{ID: node.ID, NetworkID: node.NetworkID, ServerID: node.ServerID, Connected: node.Connected, BootID: node.BootID, Platform: node.Platform, Capabilities: node.Capabilities, Since: node.Since})
+			status.Nodes = append(status.Nodes, NodeStatus{ID: node.ID, NetworkID: node.NetworkID, ServerID: node.ServerID, Connected: node.Connected, BootID: node.BootID, Platform: node.Platform, Capabilities: node.Capabilities, AllowedActions: node.AllowedActions, Since: node.Since})
 		}
 	}
 	return status

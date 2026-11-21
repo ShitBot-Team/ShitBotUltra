@@ -32,14 +32,15 @@ type Handler interface {
 }
 
 type NodeStatus struct {
-	ID           string    `json:"id"`
-	NetworkID    string    `json:"network_id"`
-	ServerID     string    `json:"server_id"`
-	Connected    bool      `json:"connected"`
-	BootID       string    `json:"boot_id,omitempty"`
-	Platform     string    `json:"platform,omitempty"`
-	Capabilities []string  `json:"capabilities"`
-	Since        time.Time `json:"since,omitempty"`
+	ID             string    `json:"id"`
+	NetworkID      string    `json:"network_id"`
+	ServerID       string    `json:"server_id"`
+	Connected      bool      `json:"connected"`
+	BootID         string    `json:"boot_id,omitempty"`
+	Platform       string    `json:"platform,omitempty"`
+	Capabilities   []string  `json:"capabilities"`
+	AllowedActions []string  `json:"allowed_actions"`
+	Since          time.Time `json:"since,omitempty"`
 }
 
 type Hub struct {
@@ -395,7 +396,7 @@ func (h *Hub) Status() []NodeStatus {
 	defer h.mu.RUnlock()
 	result := make([]NodeStatus, 0, len(h.nodes))
 	for _, n := range h.nodes {
-		status := NodeStatus{ID: n.ID, NetworkID: n.NetworkID, ServerID: n.ServerID, Capabilities: []string{}}
+		status := NodeStatus{ID: n.ID, NetworkID: n.NetworkID, ServerID: n.ServerID, Capabilities: []string{}, AllowedActions: append([]string{}, n.Actions...)}
 		if s := h.clients[n.ID]; s != nil {
 			status.Connected = true
 			status.BootID = s.hello.BootID

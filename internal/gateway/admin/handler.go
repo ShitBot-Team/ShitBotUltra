@@ -5,26 +5,16 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
-	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/ShitBot-Team/ShitBotUltra/internal/binding"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/bootstrap"
-	"github.com/ShitBot-Team/ShitBotUltra/internal/config"
-	"github.com/ShitBot-Team/ShitBotUltra/internal/events"
 	"github.com/ShitBot-Team/ShitBotUltra/internal/fault"
-	"github.com/ShitBot-Team/ShitBotUltra/internal/importer/shitbot"
-	"github.com/ShitBot-Team/ShitBotUltra/internal/securefs"
 )
 
 type Handler struct {
@@ -41,6 +31,7 @@ func New(engine *bootstrap.Engine, status func() any, listenAddress string) *Han
 		h.hosts = append(h.hosts, net.JoinHostPort(host, port), net.JoinHostPort("localhost", port))
 	}
 	h.mux.HandleFunc("GET /api/v1/status", func(w http.ResponseWriter, r *http.Request) { respond(w, http.StatusOK, h.status()) })
+	h.mux.HandleFunc("GET /api/v1/dashboard", h.dashboard)
 	h.mux.HandleFunc("GET /api/v1/connections", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, http.StatusOK, map[string]any{"nodes": engine.Hub.Status(), "adapters": engine.AdapterStatus()})
 	})
@@ -66,6 +57,7 @@ func New(engine *bootstrap.Engine, status func() any, listenAddress string) *Han
 	h.registerPlugins()
 	h.registerUpdates()
 	h.registerWebUI()
+	h.registerSettings()
 	return h
 }
 
@@ -206,333 +198,4 @@ func page(r *http.Request) (int, int, error) {
 		return 0, 0, fault.New("INVALID_INPUT", "分页参数无效")
 	}
 	return limit, offset, nil
-}
-
-func (h *Handler) getConfig(w http.ResponseWriter, r *http.Request) {
-	doc, err := h.engine.ConfigStore.Read()
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	w.Header().Set("ETag", strconv.Quote(doc.Revision))
-	respond(w, http.StatusOK, doc)
-}
-func (h *Handler) saveConfig(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Text string `json:"text"`
-	}
-	if !decode(w, r, &body) {
-		return
-	}
-	revision, err := strconv.Unquote(r.Header.Get("If-Match"))
-	if err != nil {
-		respond(w, http.StatusPreconditionRequired, map[string]any{"error": map[string]string{"code": "REVISION_REQUIRED", "message": "请在 If-Match 中提供读取时的 ETag"}})
-		return
-	}
-	doc, err := h.engine.ConfigStore.Save(body.Text, revision)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	w.Header().Set("ETag", strconv.Quote(doc.Revision))
-	h.engine.Events.Publish("config.saved", map[string]bool{"restart_required": true})
-	respond(w, http.StatusOK, map[string]any{"document": doc, "restart_required": true})
-}
-func (h *Handler) validateConfig(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Text string `json:"text"`
-	}
-	if !decode(w, r, &body) {
-		return
-	}
-	if _, err := config.Decode([]byte(body.Text)); err != nil {
-		writeError(w, fault.New("INVALID_CONFIG", err.Error()))
-		return
-	}
-	respond(w, http.StatusOK, map[string]bool{"valid": true})
-}
-
-func (h *Handler) createSecret(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Name  string `json:"name"`
-		Value string `json:"value,omitempty"`
-	}
-	if !decode(w, r, &body) {
-		return
-	}
-	if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`).MatchString(body.Name) {
-		writeError(w, fault.New("INVALID_INPUT", "凭据文件名无效"))
-		return
-	}
-	// Match the normalization used when the credential is read on startup, so
-	// the value shown to the administrator is the value the runtime will use.
-	value := strings.TrimSpace(body.Value)
-	if value == "" {
-		value = securefs.ID() + securefs.ID()
-	}
-	if len(value) < 32 || len(value) > 4096 || strings.ContainsAny(value, "\r\n\x00") {
-		writeError(w, fault.New("INVALID_INPUT", "凭据长度须为 32 至 4096 字符"))
-		return
-	}
-	path := filepath.Join(h.engine.Dir, "secrets", body.Name)
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-	if errors.Is(err, os.ErrExist) {
-		writeError(w, fault.New("REVISION_CONFLICT", "凭据已存在，请使用新文件名以免覆盖活动凭据"))
-		return
-	}
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	_, err = f.WriteString(value + "\n")
-	if err == nil {
-		err = f.Sync()
-	}
-	closeErr := f.Close()
-	if err == nil {
-		err = closeErr
-	}
-	if err != nil {
-		_ = os.Remove(path)
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusCreated, map[string]string{"reference": "file:" + body.Name, "value": value})
-}
-
-func (h *Handler) listBindings(w http.ResponseWriter, r *http.Request) {
-	network := r.URL.Query().Get("network_id")
-	if _, err := h.network(network); err != nil {
-		writeError(w, err)
-		return
-	}
-	limit, offset, err := page(r)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	items, err := h.engine.Bindings.List(r.Context(), network, nil, limit, offset)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusOK, map[string]any{"items": items})
-}
-func (h *Handler) addBinding(w http.ResponseWriter, r *http.Request) {
-	var record binding.Record
-	if !decode(w, r, &record) {
-		return
-	}
-	mode, err := h.network(record.NetworkID)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	if record.Player.IdentityMode != mode {
-		writeError(w, fault.New("IDENTITY_CONFLICT", "玩家身份模式与网络配置不匹配"))
-		return
-	}
-	record.CreatedAt = time.Now().UTC()
-	record.UpdatedAt = record.CreatedAt
-	if err := h.engine.Bindings.Add(r.Context(), record); err != nil {
-		writeError(w, err)
-		return
-	}
-	h.engine.Events.Publish("bindings.changed", map[string]string{"network_id": record.NetworkID})
-	respond(w, http.StatusCreated, record)
-}
-func (h *Handler) removeBinding(w http.ResponseWriter, r *http.Request) {
-	network := r.PathValue("network")
-	if _, err := h.network(network); err != nil {
-		writeError(w, err)
-		return
-	}
-	record, err := h.engine.Bindings.Remove(r.Context(), network, r.PathValue("name"), nil)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	h.engine.AfterUnbind(r.Context(), record)
-	respond(w, http.StatusOK, map[string]bool{"removed": true})
-}
-func (h *Handler) players(w http.ResponseWriter, r *http.Request) {
-	network := r.URL.Query().Get("network_id")
-	if _, err := h.network(network); err != nil {
-		writeError(w, err)
-		return
-	}
-	limit, offset, err := page(r)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	items, err := h.engine.Players.List(r.Context(), network, r.URL.Query().Get("online") == "true", limit, offset)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusOK, map[string]any{"items": items})
-}
-func (h *Handler) inventory(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	if _, err := h.network(q.Get("network_id")); err != nil {
-		writeError(w, err)
-		return
-	}
-	snapshot, err := h.engine.Inventory.Get(r.Context(), q.Get("network_id"), q.Get("server_id"), q.Get("player_name"), nil)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusOK, snapshot)
-}
-func (h *Handler) action(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Type    string          `json:"type"`
-		Payload json.RawMessage `json:"payload"`
-	}
-	if !decode(w, r, &body) {
-		return
-	}
-	if !slices.Contains([]string{"chat.send", "player.kick", "command.execute", "inventory.read", "tps.read", "permission.check", "placeholder.resolve"}, body.Type) || len(body.Payload) == 0 {
-		writeError(w, fault.New("INVALID_INPUT", "动作类型或参数无效"))
-		return
-	}
-	value, err := h.engine.Hub.Request(r.Context(), r.PathValue("id"), body.Type, body.Payload)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusOK, map[string]any{"result": value})
-}
-
-func (h *Handler) sources(w http.ResponseWriter, r *http.Request) {
-	items, err := h.engine.Imports.Sources()
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusOK, map[string]any{"items": items})
-}
-func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, shitbot.MaxSourceBytes)
-	value, err := h.engine.Imports.Upload(r.Context(), r.Body)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusCreated, value)
-}
-func (h *Handler) deleteSource(w http.ResponseWriter, r *http.Request) {
-	if err := h.engine.Imports.DeleteSource(r.PathValue("id")); err != nil {
-		writeError(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-func (h *Handler) preview(w http.ResponseWriter, r *http.Request) {
-	var request shitbot.Request
-	if !decode(w, r, &request) {
-		return
-	}
-	report, err := h.engine.Imports.Preview(r.Context(), request)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusCreated, report)
-}
-func (h *Handler) report(w http.ResponseWriter, r *http.Request) {
-	report, err := h.engine.Imports.Report(r.Context(), r.PathValue("id"))
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	respond(w, http.StatusOK, report)
-}
-func (h *Handler) commit(w http.ResponseWriter, r *http.Request) {
-	report, err := h.engine.Imports.Commit(r.Context(), r.PathValue("id"))
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	h.engine.Events.Publish("import.completed", map[string]any{"id": report.ID, "added": report.Added})
-	respond(w, http.StatusOK, report)
-}
-
-func (h *Handler) restore(w http.ResponseWriter, r *http.Request) {
-	report, err := h.engine.Imports.Restore(r.Context(), r.PathValue("id"))
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	h.engine.Events.Publish("import.restored", map[string]string{"id": report.ID})
-	respond(w, http.StatusOK, report)
-}
-
-func (h *Handler) stream(w http.ResponseWriter, r *http.Request) {
-	after := uint64(0)
-	if id := r.Header.Get("Last-Event-ID"); id != "" {
-		value, err := strconv.ParseUint(id, 10, 64)
-		if err != nil {
-			writeError(w, fault.New("INVALID_INPUT", "Last-Event-ID 无效"))
-			return
-		}
-		after = value
-	}
-	backlog, ch, cancel, ok := h.engine.Events.Subscribe(after)
-	if !ok {
-		writeError(w, fault.New("BUSY", "事件订阅数已达到上限"))
-		return
-	}
-	defer cancel()
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("X-Accel-Buffering", "no")
-	controller := http.NewResponseController(w)
-	send := func(event events.Event) error {
-		_ = controller.SetWriteDeadline(time.Now().Add(10 * time.Second))
-		data, err := json.Marshal(event)
-		if err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(w, "id: %d\nevent: %s\ndata: %s\n\n", event.ID, event.Type, data); err != nil {
-			return err
-		}
-		return controller.Flush()
-	}
-	for _, event := range backlog {
-		if send(event) != nil {
-			return
-		}
-	}
-	_ = controller.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	if _, err := io.WriteString(w, ": connected\n\n"); err != nil {
-		return
-	}
-	if controller.Flush() != nil {
-		return
-	}
-	ticker := time.NewTicker(15 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-r.Context().Done():
-			return
-		case event, ok := <-ch:
-			if !ok {
-				return
-			}
-			if send(event) != nil {
-				return
-			}
-		case <-ticker.C:
-			_ = controller.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if _, err := io.WriteString(w, ": heartbeat\n\n"); err != nil {
-				return
-			}
-			if controller.Flush() != nil {
-				return
-			}
-		}
-	}
 }
